@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "interpretation.schema.json",
+  "title": "interpretation_object",
+  "schema_version": "0.1",
+  "description": "Produced by the synthesis layer (Milestone 2+). Not built in Milestone 1; schema recorded now so evidence fragments are built against a stable downstream contract.",
+  "type": "object",
+  "required": [
+    "module_id", "proposed_label", "one_line_summary", "dominant_biology",
+    "supporting_claims", "confidence"
+  ],
+  "properties": {
+    "module_id": { "type": "string" },
+    "proposed_label": { "type": "string" },
+    "one_line_summary": { "type": "string" },
+    "dominant_biology": { "type": "string" },
+    "supporting_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "fragment_ids", "direction", "strength"],
+        "properties": {
+          "claim": { "type": "string" },
+          "fragment_ids": { "type": "array", "items": { "type": "string" } },
+          "direction": { "enum": ["up", "down", "mixed", "na"] },
+          "strength": { "type": "number" }
+        }
+      }
+    },
+    "cell_state": { "type": "string" },
+    "condition_dynamics": { "type": "string" },
+    "metadata_associations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["variable", "summary", "fragment_id"],
+        "properties": {
+          "variable": { "type": "string" },
+          "summary": { "type": "string" },
+          "fragment_id": { "type": "string" }
+        }
+      }
+    },
+    "literature": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["statement", "pmids"],
+        "properties": {
+          "statement": { "type": "string" },
+          "pmids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "required": ["score", "rationale"],
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rationale": { "type": "string" }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "insufficient_evidence", "needs_human_review", "possible_artifact",
+          "tool_conflict", "label_low_specificity"
+        ]
+      }
+    }
+  }
+}

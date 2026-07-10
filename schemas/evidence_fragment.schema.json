@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "evidence_fragment.schema.json",
+  "title": "evidence_fragment",
+  "schema_version": "0.1",
+  "type": "object",
+  "required": [
+    "fragment_id", "tool_id", "module_id", "type", "result",
+    "compact_summary", "top_findings", "effect_strength", "provenance"
+  ],
+  "properties": {
+    "fragment_id": {
+      "type": "string",
+      "description": "unique within a packet, e.g. 'cluster_dme' or 'metadata::diagnosis'"
+    },
+    "tool_id": { "type": "string" },
+    "module_id": { "type": "string" },
+    "type": {
+      "enum": [
+        "ranked_genes", "categorical_association", "continuous_correlation",
+        "geneset_enrichment", "signature_correlation", "cross_condition_delta",
+        "state_expression"
+      ]
+    },
+    "result": {
+      "type": "array",
+      "description": "full tidy result table, serialized row-oriented",
+      "items": { "type": "object" }
+    },
+    "compact_summary": {
+      "type": "string",
+      "description": "short digest for the model; no raw tables"
+    },
+    "top_findings": {
+      "type": "array",
+      "description": "the most salient items (genes / terms / groups) with values"
+    },
+    "effect_strength": {
+      "type": "number",
+      "description": "comparable magnitude, e.g. max(abs(r)), top log2FC, top -log10(FDR)"
+    },
+    "significance": { "type": ["number", "null"] },
+    "direction": { "enum": ["up", "down", "mixed", "na"] },
+    "provenance": {
+      "type": "object",
+      "required": ["tool_version", "params", "input_hashes", "pkg_versions", "timestamp"],
+      "properties": {
+        "tool_version": { "type": "string" },
+        "params": { "type": "object" },
+        "input_hashes": { "type": "object" },
+        "pkg_versions": { "type": "object" },
+        "timestamp": { "type": "string" }
+      }
+    }
+  }
+}
