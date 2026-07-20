@@ -4,10 +4,17 @@
 \alias{render_dataset_description}
 \title{Render a dataset description as a compact text block}
 \usage{
-render_dataset_description(desc)
+render_dataset_description(desc, data_level = "cell", aggregated = FALSE)
 }
 \arguments{
 \item{desc}{A \code{dataset_description} object.}
+
+\item{data_level}{Observation-unit descriptor of the \code{ModuleSet} the
+evidence packet was built from, e.g. \code{'cell'} or \code{'sample'}; see
+\code{\link[=components_ModuleSet]{components_ModuleSet()}}. Default \code{'cell'}.}
+
+\item{aggregated}{Whether that \code{ModuleSet}'s expression/scores are already
+aggregated across cells (e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
 }
 \value{
 A single character string.

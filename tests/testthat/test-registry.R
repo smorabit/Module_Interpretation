@@ -11,7 +11,7 @@ test_that('core tools are registered via the same register_tool() mechanism', {
     expect_true(all(c('hub_genes', 'cluster_dme', 'module_by_metadata', 'geneset_enrichment', 'signature_correlation') %in% list_tools()))
     spec <- get_tool('cluster_dme')
     expect_s3_class(spec, 'tool_spec')
-    expect_equal(spec$requires, c('clusters', 'module_scores'))
+    expect_equal(spec$requires, c('grouping', 'module_scores'))
     expect_error(get_tool('not_a_real_tool'), 'not registered')
 })
 
@@ -73,7 +73,7 @@ test_that('a registered custom tool runs through run_module() exactly like a cor
 test_that('run_module() skips a capability-mismatched tool (referenced by id) and records the reason, not fatally', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
 
-    expect_false(has_capability(go_gene_list_ms_nocap, 'clusters'))
+    expect_false(has_capability(go_gene_list_ms_nocap, 'grouping'))
     packet <- suppressMessages(run_module(
         go_gene_list_ms_nocap, 'module_a',
         list(
@@ -85,7 +85,7 @@ test_that('run_module() skips a capability-mismatched tool (referenced by id) an
     expect_setequal(ids, 'hub_genes')
     expect_equal(length(packet$provenance$skipped), 1)
     expect_equal(packet$provenance$skipped[[1]]$tool_id, 'cluster_dme')
-    expect_match(packet$provenance$skipped[[1]]$reason, 'clusters')
+    expect_match(packet$provenance$skipped[[1]]$reason, 'grouping')
 })
 
 test_that('run_module() fails loudly on a malformed fragment from a registered tool', {

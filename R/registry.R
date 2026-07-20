@@ -37,7 +37,7 @@
 #'   [module_by_metadata_tool()]) can declare more than one.
 #' @param description A one-line, human-readable description of what the tool does.
 #' @param requires The `ModuleSet` [capabilities()] this tool needs to run:
-#'   either a character vector (e.g. `c('clusters', 'module_scores')`), or a
+#'   either a character vector (e.g. `c('grouping', 'module_scores')`), or a
 #'   `function(params) -> character vector` for a tool whose requirement
 #'   depends on how it's called (e.g. [module_by_metadata_tool()] only needs
 #'   `sample_ids` for categorical columns). Default `character(0)` (no
@@ -101,7 +101,7 @@ list_tools <- function(){
     register_tool(
         'cluster_dme', cluster_dme_tool, type = 'state_expression',
         description = 'Which cell states express this module',
-        requires = c('clusters', 'module_scores')
+        requires = c('grouping', 'module_scores')
     )
     register_tool(
         'module_by_metadata', module_by_metadata_tool,

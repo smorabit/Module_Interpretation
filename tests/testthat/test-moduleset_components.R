@@ -11,7 +11,7 @@ test_that('components_ModuleSet() validates its inputs', {
 
     expect_error(components_ModuleSet(data.frame(x = 1), expr, meta), 'module.*gene_name')
     expect_error(components_ModuleSet(gene_table, expr, meta[1:5, , drop = FALSE]), 'align')
-    expect_error(components_ModuleSet(gene_table, expr, meta, cluster_col = 'not_a_column'), 'cluster_col')
+    expect_error(components_ModuleSet(gene_table, expr, meta, group_col = 'not_a_column'), 'group_col')
     expect_error(components_ModuleSet(gene_table, expr, meta, sample_col = 'not_a_column'), 'sample_col')
     expect_s3_class(components_ModuleSet(gene_table, expr, meta), 'components_ModuleSet')
 })
@@ -33,18 +33,18 @@ test_that('components_ModuleSet() reports module_scores/clusters/sample_ids as d
     bare_ms <- components_ModuleSet(gene_table, expr, meta)
     caps <- capabilities(bare_ms)
     expect_false(caps[['module_scores']])
-    expect_false(caps[['clusters']])
+    expect_false(caps[['grouping']])
     expect_false(caps[['sample_ids']])
     expect_null(module_scores(bare_ms, module = 'm1'))
 
     full_ms <- components_ModuleSet(
         gene_table, expr, meta,
         scores = data.frame(m1 = rnorm(10), row.names = colnames(expr)),
-        cluster_col = 'cell_type'
+        group_col = 'cell_type'
     )
     full_caps <- capabilities(full_ms)
     expect_true(full_caps[['module_scores']])
-    expect_true(full_caps[['clusters']])
+    expect_true(full_caps[['grouping']])
     expect_false(full_caps[['sample_ids']])
 })
 
@@ -65,7 +65,11 @@ test_that('components_ModuleSet() adapter contract matches hdWGCNA_ModuleSet\'s 
     expect_true(is.numeric(one_score))
 
     expect_equal(ncol(expression(go_components_ms)), nrow(metadata(go_components_ms)))
-    expect_true(all(capabilities(go_components_ms)))
+    caps <- capabilities(go_components_ms)
+    # pseudobulk is FALSE for every current adapter (docs/milestone_abstract_moduleset.md Part 3);
+    # everything else is declared TRUE for this fully-populated fixture
+    expect_true(all(caps[names(caps) != 'pseudobulk']))
+    expect_false(caps[['pseudobulk']])
 })
 
 test_that('the evidence pipeline runs end to end on a components_ModuleSet and produces valid packets', {

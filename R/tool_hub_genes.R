@@ -43,7 +43,8 @@ hub_genes_tool <- function(ctx){
         provenance = make_provenance(
             tool_version = '0.1',
             params = list(n_hubs = n_hubs),
-            pkg_versions = pkg_versions(ctx$ms)
+            pkg_versions = pkg_versions(ctx$ms),
+            module_method = ctx$module_method %||% NA_character_
         )
     )
 }

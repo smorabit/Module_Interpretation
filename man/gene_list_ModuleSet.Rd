@@ -9,9 +9,12 @@ gene_list_ModuleSet(
   gene_sets,
   expression,
   metadata,
-  cluster_col = NULL,
+  counts = NULL,
+  group_col = NULL,
   sample_col = NULL,
   method = c("UCell", "decoupleR"),
+  data_level = "cell",
+  aggregated = FALSE,
   ...
 )
 
@@ -27,7 +30,11 @@ are dropped.}
 \item{metadata}{A data.frame with one row per cell/sample, aligned to the
 columns of \code{expression}.}
 
-\item{cluster_col}{Optional name of a \code{metadata} column declared as the
+\item{counts}{Optional genes-by-cells (or genes-by-samples) raw counts
+matrix, same dimensions as \code{expression}. If omitted, \code{\link[=counts]{counts()}} returns
+\code{NULL} and \code{\link[=capabilities]{capabilities()}}\verb{$counts} is \code{FALSE}.}
+
+\item{group_col}{Optional name of a \code{metadata} column declared as the
 cell/sample-state grouping.}
 
 \item{sample_col}{Optional name of a \code{metadata} column declared as the
@@ -38,6 +45,12 @@ sample id.}
 (\code{\link[decoupleR:run_ulm]{decoupleR::run_ulm()}} over a network built from \code{gene_sets} with a
 uniform mode-of-regulation, since these gene lists carry no signed
 weights).}
+
+\item{data_level}{Observation-unit descriptor, e.g. \code{'cell'} or \code{'sample'}.
+Default \code{'cell'}.}
+
+\item{aggregated}{Whether \code{expression} is already aggregated across cells
+(e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
 
 \item{...}{Passed through to the scoring backend
 (\code{UCell::ScoreSignatures_UCell()}'s \code{...}, or \code{decoupleR::run_ulm()}'s
@@ -54,11 +67,11 @@ counts equally) and computes per-cell/sample module scores on the fly via
 \code{\link[UCell:ScoreSignatures_UCell]{UCell::ScoreSignatures_UCell()}} or \code{\link[decoupleR:run_ulm]{decoupleR::run_ulm()}}. Builds on
 \code{\link[=components_ModuleSet]{components_ModuleSet()}}; \code{\link[=capabilities]{capabilities()}}\verb{$gene_weights} is \code{FALSE}
 (there's no kME-equivalent), \code{module_scores}/\code{expression} are \code{TRUE}, and
-\code{clusters}/\code{sample_ids} follow \code{cluster_col}/\code{sample_col} as usual.
+\code{grouping}/\code{sample_ids} follow \code{group_col}/\code{sample_col} as usual.
 }
 \examples{
 expr <- matrix(abs(rnorm(40)), nrow = 4, dimnames = list(paste0('G', 1:4), paste0('c', 1:10)))
 meta <- data.frame(cell_type = rep(c('a', 'b'), 5), row.names = colnames(expr))
-ms <- gene_list_ModuleSet(list(m1 = c('G1', 'G2')), expr, meta, cluster_col = 'cell_type')
+ms <- gene_list_ModuleSet(list(m1 = c('G1', 'G2')), expr, meta, group_col = 'cell_type')
 modules(ms)
 }

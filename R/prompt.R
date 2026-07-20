@@ -88,6 +88,10 @@ build_system_prompt <- function(){
 #'
 #' @param packet An evidence packet, as built by [build_evidence_packet()].
 #' @param desc A `dataset_description`; see [dataset_description()].
+#' @param data_level Observation-unit descriptor of the `ModuleSet` the
+#'   packet was built from; see [render_dataset_description()]. Default `'cell'`.
+#' @param aggregated Whether that `ModuleSet`'s expression/scores are already
+#'   aggregated across cells; see [render_dataset_description()]. Default `FALSE`.
 #' @return A single character string.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -95,9 +99,9 @@ build_system_prompt <- function(){
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' cat(build_user_prompt(packet, desc))
 #' @export
-build_user_prompt <- function(packet, desc){
+build_user_prompt <- function(packet, desc, data_level = 'cell', aggregated = FALSE){
     paste(
-        render_dataset_description(desc),
+        render_dataset_description(desc, data_level = data_level, aggregated = aggregated),
         '',
         render_packet_compact(packet),
         sep = '\n'

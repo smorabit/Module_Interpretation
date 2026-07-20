@@ -75,7 +75,8 @@ signature_correlation_tool <- function(ctx){
     provenance <- make_provenance(
         tool_version = '0.1',
         params = list(library_files = unname(library_files), method = method, sample_col = sample_col),
-        pkg_versions = pkg_versions(ctx$ms)
+        pkg_versions = pkg_versions(ctx$ms),
+        module_method = ctx$module_method %||% NA_character_
     )
 
     libs <- lapply(library_files, .read_signature_library)

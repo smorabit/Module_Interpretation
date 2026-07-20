@@ -6,12 +6,18 @@
 \alias{module_scores.synthetic_ModuleSet}
 \alias{gene_membership.synthetic_ModuleSet}
 \alias{expression.synthetic_ModuleSet}
+\alias{counts.synthetic_ModuleSet}
 \alias{metadata.synthetic_ModuleSet}
 \alias{pkg_versions.synthetic_ModuleSet}
 \alias{capabilities.synthetic_ModuleSet}
 \title{Wrap a ModuleSet with hand-picked gene sets as synthetic modules}
 \usage{
-synthetic_ModuleSet(base_ms, gene_sets)
+synthetic_ModuleSet(
+  base_ms,
+  gene_sets,
+  data_level = "cell",
+  aggregated = FALSE
+)
 
 \method{modules}{synthetic_ModuleSet}(ms, ...)
 
@@ -20,6 +26,8 @@ synthetic_ModuleSet(base_ms, gene_sets)
 \method{gene_membership}{synthetic_ModuleSet}(ms, module, ...)
 
 \method{expression}{synthetic_ModuleSet}(ms, ...)
+
+\method{counts}{synthetic_ModuleSet}(ms, ...)
 
 \method{metadata}{synthetic_ModuleSet}(ms, ...)
 
@@ -34,9 +42,15 @@ synthetic_ModuleSet(base_ms, gene_sets)
 \item{gene_sets}{A named list of character vectors, one per synthetic
 module, e.g. \code{list(module_a = c('GENE1', 'GENE2'))}.}
 
+\item{data_level}{Observation-unit descriptor, e.g. \code{'cell'} or \code{'sample'}.
+Default \code{'cell'}.}
+
+\item{aggregated}{Whether \code{expression()} is already aggregated across
+cells (e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
+
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},
-\code{\link[=expression]{expression()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
+\code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
 
 \item{...}{Passed to methods.}
 

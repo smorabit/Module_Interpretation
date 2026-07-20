@@ -12,7 +12,7 @@
 #'   [run_module()]. `ctx$params$group_by` (required) is the metadata column
 #'   naming the cell-state grouping (e.g. `'lv2_annot'`).
 #' @return An `evidence_fragment` of type `'state_expression'`, or `NULL` if
-#'   `ctx$ms` lacks the `clusters` or `module_scores` capability (see
+#'   `ctx$ms` lacks the `grouping` or `module_scores` capability (see
 #'   [capabilities()]) -- a graceful skip, not an error.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -22,8 +22,8 @@ cluster_dme_tool <- function(ctx){
     group_by <- ctx$params$group_by
     if (is.null(group_by)) stop('cluster_dme requires params$group_by')
 
-    if (!has_capability(ctx$ms, 'clusters') || !has_capability(ctx$ms, 'module_scores')) {
-        message('cluster_dme: skipped, module set lacks the clusters/module_scores capability')
+    if (!has_capability(ctx$ms, 'grouping') || !has_capability(ctx$ms, 'module_scores')) {
+        message('cluster_dme: skipped, module set lacks the grouping/module_scores capability')
         return(NULL)
     }
 
@@ -67,7 +67,8 @@ cluster_dme_tool <- function(ctx){
             # method = 'per_cell' now; a pseudobulk-aggregated variant can slot in
             # here later since categorical_group_test() only needs scores + groups
             params = list(group_by = group_by, method = 'per_cell'),
-            pkg_versions = pkg_versions(ctx$ms)
+            pkg_versions = pkg_versions(ctx$ms),
+            module_method = ctx$module_method %||% NA_character_
         )
     )
 }

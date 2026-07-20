@@ -106,22 +106,24 @@ if (go_data_available) {
     rownames(go_components_scores) <- colnames(go_fixture$expr)
 
     # the generic components_ModuleSet fixture (docs/milestone_extensibility.md task 2/6)
+    # counts is a rounded stand-in for raw counts, same dimensions as expression, so this
+    # fixture exercises every declared capability (docs/milestone_abstract_moduleset.md Part 2)
     go_components_ms <- components_ModuleSet(
         go_components_gene_table, go_fixture$expr, go_fixture$meta, scores = go_components_scores,
-        cluster_col = 'cell_type', sample_col = 'sample'
+        counts = round(go_fixture$expr), group_col = 'cell_type', sample_col = 'sample'
     )
 
     # gene-list ModuleSet fixtures (task 4/6): no weights, scores computed on
-    # the fly. Two scoring backends, plus a variant with no cluster_col/
+    # the fly. Two scoring backends, plus a variant with no group_col/
     # sample_col declared, to exercise the capability-based graceful-skip
     # path (task 5) end to end.
     go_gene_list_ms_ucell <- gene_list_ModuleSet(
         go_gene_sets, go_fixture$expr, go_fixture$meta,
-        cluster_col = 'cell_type', sample_col = 'sample', method = 'UCell'
+        group_col = 'cell_type', sample_col = 'sample', method = 'UCell'
     )
     go_gene_list_ms_decoupler <- gene_list_ModuleSet(
         go_gene_sets, go_fixture$expr, go_fixture$meta,
-        cluster_col = 'cell_type', sample_col = 'sample', method = 'decoupleR'
+        group_col = 'cell_type', sample_col = 'sample', method = 'decoupleR'
     )
     go_gene_list_ms_nocap <- gene_list_ModuleSet(go_gene_sets, go_fixture$expr, go_fixture$meta, method = 'UCell')
 

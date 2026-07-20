@@ -157,7 +157,8 @@ module_by_metadata_tool <- function(ctx){
                 column = column, column_type = column_type, sample_col = sample_col,
                 level = level, n_units = n_units
             ),
-            pkg_versions = pkg_versions(ctx$ms)
+            pkg_versions = pkg_versions(ctx$ms),
+            module_method = ctx$module_method %||% NA_character_
         )
     )
 }

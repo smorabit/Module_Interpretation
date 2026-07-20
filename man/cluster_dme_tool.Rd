@@ -13,7 +13,7 @@ naming the cell-state grouping (e.g. \code{'lv2_annot'}).}
 }
 \value{
 An \code{evidence_fragment} of type \code{'state_expression'}, or \code{NULL} if
-\code{ctx$ms} lacks the \code{clusters} or \code{module_scores} capability (see
+\code{ctx$ms} lacks the \code{grouping} or \code{module_scores} capability (see
 \code{\link[=capabilities]{capabilities()}}) -- a graceful skip, not an error.
 }
 \description{

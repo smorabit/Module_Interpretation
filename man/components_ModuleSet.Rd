@@ -6,6 +6,7 @@
 \alias{gene_membership.components_ModuleSet}
 \alias{module_scores.components_ModuleSet}
 \alias{expression.components_ModuleSet}
+\alias{counts.components_ModuleSet}
 \alias{metadata.components_ModuleSet}
 \alias{pkg_versions.components_ModuleSet}
 \alias{capabilities.components_ModuleSet}
@@ -16,8 +17,11 @@ components_ModuleSet(
   expression,
   metadata,
   scores = NULL,
-  cluster_col = NULL,
-  sample_col = NULL
+  counts = NULL,
+  group_col = NULL,
+  sample_col = NULL,
+  data_level = "cell",
+  aggregated = FALSE
 )
 
 \method{modules}{components_ModuleSet}(ms, ...)
@@ -27,6 +31,8 @@ components_ModuleSet(
 \method{module_scores}{components_ModuleSet}(ms, module = NULL, ...)
 
 \method{expression}{components_ModuleSet}(ms, ...)
+
+\method{counts}{components_ModuleSet}(ms, ...)
 
 \method{metadata}{components_ModuleSet}(ms, ...)
 
@@ -50,19 +56,29 @@ per module -- the same shape \code{\link[=module_scores]{module_scores()}} docum
 \code{\link[=module_scores]{module_scores()}} returns \code{NULL} and \code{\link[=capabilities]{capabilities()}}\verb{$module_scores} is
 \code{FALSE}.}
 
-\item{cluster_col}{Optional name of a \code{metadata} column declared as the
+\item{counts}{Optional genes-by-cells (or genes-by-samples) raw counts
+matrix, same dimensions as \code{expression}. If omitted, \code{\link[=counts]{counts()}} returns
+\code{NULL} and \code{\link[=capabilities]{capabilities()}}\verb{$counts} is \code{FALSE}.}
+
+\item{group_col}{Optional name of a \code{metadata} column declared as the
 cell/sample-state grouping. This only drives
-\code{\link[=capabilities]{capabilities()}}\verb{$clusters} -- core tools still take the grouping column
+\code{\link[=capabilities]{capabilities()}}\verb{$grouping} -- core tools still take the grouping column
 name as a parameter (e.g. \code{cluster_dme_tool}'s \code{group_by}); declaring
-\code{cluster_col} is how this ModuleSet advertises that it supports the
+\code{group_col} is how this ModuleSet advertises that it supports the
 concept at all.}
 
 \item{sample_col}{Optional name of a \code{metadata} column declared as the
-sample id, analogous to \code{cluster_col} for \code{\link[=capabilities]{capabilities()}}\verb{$sample_ids}.}
+sample id, analogous to \code{group_col} for \code{\link[=capabilities]{capabilities()}}\verb{$sample_ids}.}
+
+\item{data_level}{Observation-unit descriptor, e.g. \code{'cell'} or \code{'sample'}.
+Default \code{'cell'}.}
+
+\item{aggregated}{Whether \code{expression}/\code{scores} are already aggregated
+across cells (e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
 
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},
-\code{\link[=expression]{expression()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
+\code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
 
 \item{...}{Passed to methods.}
 
@@ -82,6 +98,6 @@ extracting their own data into these same shapes and delegating.
 gene_table <- data.frame(module = 'm1', gene_name = c('G1', 'G2'), weight = c(0.9, 0.5))
 expr <- matrix(rnorm(20), nrow = 2, dimnames = list(c('G1', 'G2'), paste0('c', 1:10)))
 meta <- data.frame(cell_type = rep(c('a', 'b'), 5), row.names = colnames(expr))
-ms <- components_ModuleSet(gene_table, expr, meta, cluster_col = 'cell_type')
+ms <- components_ModuleSet(gene_table, expr, meta, group_col = 'cell_type')
 modules(ms)
 }

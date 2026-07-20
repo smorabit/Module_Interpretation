@@ -11,15 +11,19 @@
 #' The only `ModuleSet` adapter that touches Seurat/hdWGCNA directly; every
 #' core evidence tool depends only on the generic `ModuleSet` contract
 #' ([modules()], [gene_membership()], [module_scores()], [expression()],
-#' [metadata()], [pkg_versions()]), never on this backend.
+#' [counts()], [metadata()], [pkg_versions()]), never on this backend.
 #'
 #' @param seurat_obj A `Seurat` object with an hdWGCNA experiment attached
 #'   (i.e. run through the hdWGCNA pipeline).
 #' @param wgcna_name Name of the hdWGCNA experiment to read from. Defaults to
 #'   whichever experiment is currently active on `seurat_obj`.
+#' @param data_level Observation-unit descriptor, e.g. `'cell'` or `'sample'`.
+#'   Default `'cell'`.
+#' @param aggregated Whether `expression()`/`module_scores()` are already
+#'   aggregated across cells (e.g. pseudobulk) rather than per-cell. Default `FALSE`.
 #' @param ms A `ModuleSet` object; the dispatch target for the generic
 #'   methods below ([modules()], [gene_membership()], [module_scores()],
-#'   [expression()], [metadata()], [pkg_versions()], [capabilities()]).
+#'   [expression()], [counts()], [metadata()], [pkg_versions()], [capabilities()]).
 #' @param module A single module id, as returned by [modules()].
 #' @param ... Passed to methods.
 #' @return An `hdWGCNA_ModuleSet` object.
@@ -31,10 +35,13 @@
 #' modules(ms)
 #' }
 #' @export
-hdWGCNA_ModuleSet <- function(seurat_obj, wgcna_name = NULL){
+hdWGCNA_ModuleSet <- function(seurat_obj, wgcna_name = NULL, data_level = 'cell', aggregated = FALSE){
     if (is.null(wgcna_name)) wgcna_name <- seurat_obj@misc$active_wgcna
     structure(
-        list(seurat_obj = seurat_obj, wgcna_name = wgcna_name),
+        list(
+            seurat_obj = seurat_obj, wgcna_name = wgcna_name,
+            data_level = data_level, aggregated = aggregated
+        ),
         class = 'hdWGCNA_ModuleSet'
     )
 }
@@ -100,6 +107,12 @@ expression.hdWGCNA_ModuleSet <- function(ms, ...){
 
 #' @rdname hdWGCNA_ModuleSet
 #' @export
+counts.hdWGCNA_ModuleSet <- function(ms, ...){
+    Seurat::GetAssayData(ms$seurat_obj, assay = Seurat::DefaultAssay(ms$seurat_obj), layer = 'counts')
+}
+
+#' @rdname hdWGCNA_ModuleSet
+#' @export
 metadata.hdWGCNA_ModuleSet <- function(ms, ...){
     ms$seurat_obj@meta.data
 }
@@ -120,5 +133,8 @@ pkg_versions.hdWGCNA_ModuleSet <- function(ms, ...){
 #' @rdname hdWGCNA_ModuleSet
 #' @export
 capabilities.hdWGCNA_ModuleSet <- function(ms, ...){
-    c(gene_weights = TRUE, module_scores = TRUE, expression = TRUE, clusters = TRUE, sample_ids = TRUE)
+    c(
+        gene_weights = TRUE, module_scores = TRUE, expression = TRUE, counts = TRUE,
+        grouping = TRUE, sample_ids = TRUE, pseudobulk = FALSE
+    )
 }

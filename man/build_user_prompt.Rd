@@ -4,12 +4,18 @@
 \alias{build_user_prompt}
 \title{Build the synthesis user prompt for one module}
 \usage{
-build_user_prompt(packet, desc)
+build_user_prompt(packet, desc, data_level = "cell", aggregated = FALSE)
 }
 \arguments{
 \item{packet}{An evidence packet, as built by \code{\link[=build_evidence_packet]{build_evidence_packet()}}.}
 
 \item{desc}{A \code{dataset_description}; see \code{\link[=dataset_description]{dataset_description()}}.}
+
+\item{data_level}{Observation-unit descriptor of the \code{ModuleSet} the
+packet was built from; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{'cell'}.}
+
+\item{aggregated}{Whether that \code{ModuleSet}'s expression/scores are already
+aggregated across cells; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{FALSE}.}
 }
 \value{
 A single character string.

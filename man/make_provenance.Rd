@@ -9,7 +9,8 @@ make_provenance(
   params = list(),
   input_hashes = list(),
   pkg_versions = list(),
-  source = "computed"
+  source = "computed",
+  module_method = NA_character_
 )
 }
 \arguments{
@@ -24,6 +25,11 @@ the \code{ModuleSet}'s own \code{\link[=pkg_versions]{pkg_versions()}}.}
 
 \item{source}{\code{'computed'} (default, tool-produced) or \code{'user_supplied'}
 (set automatically by \code{\link[=import_fragment]{import_fragment()}}).}
+
+\item{module_method}{Optional free-form description of how the modules
+themselves were generated, e.g. \code{'cNMF factors, k=20'}; see
+\code{\link[=dataset_description]{dataset_description()}}. Threaded through from \code{\link[=run_module]{run_module()}} /
+\code{\link[=run_orchestrator]{run_orchestrator()}}'s \code{module_method} argument, when given. Default \code{NA}.}
 }
 \value{
 A provenance list suitable for \code{\link[=evidence_fragment]{evidence_fragment()}}'s \code{provenance} argument.

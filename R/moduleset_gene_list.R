@@ -13,7 +13,7 @@
 #' [UCell::ScoreSignatures_UCell()] or [decoupleR::run_ulm()]. Builds on
 #' [components_ModuleSet()]; [capabilities()]`$gene_weights` is `FALSE`
 #' (there's no kME-equivalent), `module_scores`/`expression` are `TRUE`, and
-#' `clusters`/`sample_ids` follow `cluster_col`/`sample_col` as usual.
+#' `grouping`/`sample_ids` follow `group_col`/`sample_col` as usual.
 #'
 #' @param gene_sets A named list of character vectors, one per module, e.g.
 #'   `list(module_a = c('GENE1', 'GENE2'))`. Genes not present in `expression`
@@ -21,7 +21,10 @@
 #' @param expression A genes-by-cells (or genes-by-samples) numeric matrix.
 #' @param metadata A data.frame with one row per cell/sample, aligned to the
 #'   columns of `expression`.
-#' @param cluster_col Optional name of a `metadata` column declared as the
+#' @param counts Optional genes-by-cells (or genes-by-samples) raw counts
+#'   matrix, same dimensions as `expression`. If omitted, [counts()] returns
+#'   `NULL` and [capabilities()]`$counts` is `FALSE`.
+#' @param group_col Optional name of a `metadata` column declared as the
 #'   cell/sample-state grouping.
 #' @param sample_col Optional name of a `metadata` column declared as the
 #'   sample id.
@@ -30,6 +33,10 @@
 #'   ([decoupleR::run_ulm()] over a network built from `gene_sets` with a
 #'   uniform mode-of-regulation, since these gene lists carry no signed
 #'   weights).
+#' @param data_level Observation-unit descriptor, e.g. `'cell'` or `'sample'`.
+#'   Default `'cell'`.
+#' @param aggregated Whether `expression` is already aggregated across cells
+#'   (e.g. pseudobulk) rather than per-cell. Default `FALSE`.
 #' @param ... Passed through to the scoring backend
 #'   (`UCell::ScoreSignatures_UCell()`'s `...`, or `decoupleR::run_ulm()`'s
 #'   `minsize` etc.).
@@ -38,11 +45,12 @@
 #' @examples
 #' expr <- matrix(abs(rnorm(40)), nrow = 4, dimnames = list(paste0('G', 1:4), paste0('c', 1:10)))
 #' meta <- data.frame(cell_type = rep(c('a', 'b'), 5), row.names = colnames(expr))
-#' ms <- gene_list_ModuleSet(list(m1 = c('G1', 'G2')), expr, meta, cluster_col = 'cell_type')
+#' ms <- gene_list_ModuleSet(list(m1 = c('G1', 'G2')), expr, meta, group_col = 'cell_type')
 #' modules(ms)
 #' @export
-gene_list_ModuleSet <- function(gene_sets, expression, metadata, cluster_col = NULL,
-                                 sample_col = NULL, method = c('UCell', 'decoupleR'), ...){
+gene_list_ModuleSet <- function(gene_sets, expression, metadata, counts = NULL, group_col = NULL,
+                                 sample_col = NULL, method = c('UCell', 'decoupleR'),
+                                 data_level = 'cell', aggregated = FALSE, ...){
     method <- match.arg(method)
 
     gene_table <- do.call(rbind, lapply(names(gene_sets), function(m){
@@ -52,8 +60,9 @@ gene_list_ModuleSet <- function(gene_sets, expression, metadata, cluster_col = N
     scores <- .score_gene_sets(gene_sets, expression, method = method, ...)
 
     ms <- components_ModuleSet(
-        gene_table, expression, metadata, scores = scores,
-        cluster_col = cluster_col, sample_col = sample_col
+        gene_table, expression, metadata, scores = scores, counts = counts,
+        group_col = group_col, sample_col = sample_col,
+        data_level = data_level, aggregated = aggregated
     )
     ms$method <- method
     class(ms) <- c('gene_list_ModuleSet', class(ms))

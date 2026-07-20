@@ -4,7 +4,13 @@
 \alias{run_module}
 \title{Run one module's evidence tools and build its evidence packet}
 \usage{
-run_module(ms, module_id, tool_config, input_hash = NA_character_)
+run_module(
+  ms,
+  module_id,
+  tool_config,
+  input_hash = NA_character_,
+  module_method = NA_character_
+)
 }
 \arguments{
 \item{ms}{A \code{ModuleSet}.}
@@ -28,6 +34,12 @@ Either form's \code{params} is passed through as \code{ctx$params}.}
 
 \item{input_hash}{Optional hash of the input \code{ModuleSet}, recorded on the
 packet for provenance.}
+
+\item{module_method}{Optional free-form description of how the modules
+themselves were generated, e.g. \code{'cNMF factors, k=20'}; see
+\code{\link[=dataset_description]{dataset_description()}}. Passed through as \code{ctx$module_method}, and every
+core tool records it on its fragment's provenance via
+\code{\link[=make_provenance]{make_provenance()}}. Default \code{NA}.}
 }
 \value{
 An evidence packet; see \code{\link[=build_evidence_packet]{build_evidence_packet()}}.

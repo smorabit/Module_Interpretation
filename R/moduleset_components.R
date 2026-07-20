@@ -24,17 +24,24 @@
 #'   per module -- the same shape [module_scores()] documents. If omitted,
 #'   [module_scores()] returns `NULL` and [capabilities()]`$module_scores` is
 #'   `FALSE`.
-#' @param cluster_col Optional name of a `metadata` column declared as the
+#' @param counts Optional genes-by-cells (or genes-by-samples) raw counts
+#'   matrix, same dimensions as `expression`. If omitted, [counts()] returns
+#'   `NULL` and [capabilities()]`$counts` is `FALSE`.
+#' @param group_col Optional name of a `metadata` column declared as the
 #'   cell/sample-state grouping. This only drives
-#'   [capabilities()]`$clusters` -- core tools still take the grouping column
+#'   [capabilities()]`$grouping` -- core tools still take the grouping column
 #'   name as a parameter (e.g. `cluster_dme_tool`'s `group_by`); declaring
-#'   `cluster_col` is how this ModuleSet advertises that it supports the
+#'   `group_col` is how this ModuleSet advertises that it supports the
 #'   concept at all.
 #' @param sample_col Optional name of a `metadata` column declared as the
-#'   sample id, analogous to `cluster_col` for [capabilities()]`$sample_ids`.
+#'   sample id, analogous to `group_col` for [capabilities()]`$sample_ids`.
+#' @param data_level Observation-unit descriptor, e.g. `'cell'` or `'sample'`.
+#'   Default `'cell'`.
+#' @param aggregated Whether `expression`/`scores` are already aggregated
+#'   across cells (e.g. pseudobulk) rather than per-cell. Default `FALSE`.
 #' @param ms A `ModuleSet` object; the dispatch target for the generic
 #'   methods below ([modules()], [gene_membership()], [module_scores()],
-#'   [expression()], [metadata()], [pkg_versions()], [capabilities()]).
+#'   [expression()], [counts()], [metadata()], [pkg_versions()], [capabilities()]).
 #' @param module A single module id, as returned by [modules()].
 #' @param ... Passed to methods.
 #' @return A `components_ModuleSet` object.
@@ -42,11 +49,12 @@
 #' gene_table <- data.frame(module = 'm1', gene_name = c('G1', 'G2'), weight = c(0.9, 0.5))
 #' expr <- matrix(rnorm(20), nrow = 2, dimnames = list(c('G1', 'G2'), paste0('c', 1:10)))
 #' meta <- data.frame(cell_type = rep(c('a', 'b'), 5), row.names = colnames(expr))
-#' ms <- components_ModuleSet(gene_table, expr, meta, cluster_col = 'cell_type')
+#' ms <- components_ModuleSet(gene_table, expr, meta, group_col = 'cell_type')
 #' modules(ms)
 #' @export
-components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL,
-                                  cluster_col = NULL, sample_col = NULL){
+components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL, counts = NULL,
+                                  group_col = NULL, sample_col = NULL,
+                                  data_level = 'cell', aggregated = FALSE){
     if (!all(c('module', 'gene_name') %in% colnames(gene_table))) {
         stop("gene_table must have 'module' and 'gene_name' columns")
     }
@@ -56,8 +64,12 @@ components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL
     if (!is.null(scores) && nrow(scores) != ncol(expression)) {
         stop('scores rows must align with expression columns (', nrow(scores), ' vs ', ncol(expression), ')')
     }
-    if (!is.null(cluster_col) && !(cluster_col %in% colnames(metadata))) {
-        stop('cluster_col not found in metadata: ', cluster_col)
+    if (!is.null(counts) && !identical(dim(counts), dim(expression))) {
+        stop('counts dimensions must match expression (', paste(dim(counts), collapse = 'x'),
+             ' vs ', paste(dim(expression), collapse = 'x'), ')')
+    }
+    if (!is.null(group_col) && !(group_col %in% colnames(metadata))) {
+        stop('group_col not found in metadata: ', group_col)
     }
     if (!is.null(sample_col) && !(sample_col %in% colnames(metadata))) {
         stop('sample_col not found in metadata: ', sample_col)
@@ -70,7 +82,9 @@ components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL
         list(
             gene_table = gene_table, expression = expression, metadata = metadata,
             scores = if (is.null(scores)) NULL else as.data.frame(scores),
-            has_weight = has_weight, cluster_col = cluster_col, sample_col = sample_col
+            counts = counts,
+            has_weight = has_weight, group_col = group_col, sample_col = sample_col,
+            data_level = data_level, aggregated = aggregated
         ),
         class = 'components_ModuleSet'
     )
@@ -104,6 +118,10 @@ expression.components_ModuleSet <- function(ms, ...) ms$expression
 
 #' @rdname components_ModuleSet
 #' @export
+counts.components_ModuleSet <- function(ms, ...) ms$counts
+
+#' @rdname components_ModuleSet
+#' @export
 metadata.components_ModuleSet <- function(ms, ...) ms$metadata
 
 #' @rdname components_ModuleSet
@@ -119,7 +137,9 @@ capabilities.components_ModuleSet <- function(ms, ...){
         gene_weights = ms$has_weight,
         module_scores = !is.null(ms$scores),
         expression = !is.null(ms$expression),
-        clusters = !is.null(ms$cluster_col),
-        sample_ids = !is.null(ms$sample_col)
+        counts = !is.null(ms$counts),
+        grouping = !is.null(ms$group_col),
+        sample_ids = !is.null(ms$sample_col),
+        pseudobulk = FALSE
     )
 }

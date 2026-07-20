@@ -1,7 +1,7 @@
 ## gene_list_ModuleSet: modules from named gene lists, scored on the fly via
 ## UCell or decoupleR (docs/milestone_extensibility.md task 4). Also exercises
 ## the capability-aware graceful-skip path (task 5): a variant with no
-## cluster_col/sample_col declared must not crash cluster_dme_tool /
+## group_col/sample_col declared must not crash cluster_dme_tool /
 ## module_by_metadata_tool, just skip them.
 
 test_that('gene_list_ModuleSet() has no gene_weights, regardless of scoring method', {
@@ -39,9 +39,9 @@ test_that('the evidence pipeline runs end to end on a gene_list_ModuleSet and pr
     }
 })
 
-test_that('cluster_dme_tool() skips gracefully (returns NULL, not an error) without a clusters capability', {
+test_that('cluster_dme_tool() skips gracefully (returns NULL, not an error) without a grouping capability', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
-    expect_false(has_capability(go_gene_list_ms_nocap, 'clusters'))
+    expect_false(has_capability(go_gene_list_ms_nocap, 'grouping'))
     ctx <- list(ms = go_gene_list_ms_nocap, module_id = 'module_a', params = list(group_by = 'cell_type'))
     expect_message(result <- cluster_dme_tool(ctx), 'skipped')
     expect_null(result)

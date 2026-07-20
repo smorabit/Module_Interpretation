@@ -6,12 +6,18 @@
 \alias{gene_membership.hdWGCNA_ModuleSet}
 \alias{module_scores.hdWGCNA_ModuleSet}
 \alias{expression.hdWGCNA_ModuleSet}
+\alias{counts.hdWGCNA_ModuleSet}
 \alias{metadata.hdWGCNA_ModuleSet}
 \alias{pkg_versions.hdWGCNA_ModuleSet}
 \alias{capabilities.hdWGCNA_ModuleSet}
 \title{Build a ModuleSet from a Seurat object with an hdWGCNA experiment}
 \usage{
-hdWGCNA_ModuleSet(seurat_obj, wgcna_name = NULL)
+hdWGCNA_ModuleSet(
+  seurat_obj,
+  wgcna_name = NULL,
+  data_level = "cell",
+  aggregated = FALSE
+)
 
 \method{modules}{hdWGCNA_ModuleSet}(ms, include_grey = FALSE, ...)
 
@@ -20,6 +26,8 @@ hdWGCNA_ModuleSet(seurat_obj, wgcna_name = NULL)
 \method{module_scores}{hdWGCNA_ModuleSet}(ms, module = NULL, ...)
 
 \method{expression}{hdWGCNA_ModuleSet}(ms, ...)
+
+\method{counts}{hdWGCNA_ModuleSet}(ms, ...)
 
 \method{metadata}{hdWGCNA_ModuleSet}(ms, ...)
 
@@ -34,9 +42,15 @@ hdWGCNA_ModuleSet(seurat_obj, wgcna_name = NULL)
 \item{wgcna_name}{Name of the hdWGCNA experiment to read from. Defaults to
 whichever experiment is currently active on \code{seurat_obj}.}
 
+\item{data_level}{Observation-unit descriptor, e.g. \code{'cell'} or \code{'sample'}.
+Default \code{'cell'}.}
+
+\item{aggregated}{Whether \code{expression()}/\code{module_scores()} are already
+aggregated across cells (e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
+
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},
-\code{\link[=expression]{expression()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
+\code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
 
 \item{include_grey}{Include hdWGCNA's 'grey' bucket for unassigned genes
 (not a real co-expression module). Default \code{FALSE}.}
@@ -52,7 +66,7 @@ An \code{hdWGCNA_ModuleSet} object.
 The only \code{ModuleSet} adapter that touches Seurat/hdWGCNA directly; every
 core evidence tool depends only on the generic \code{ModuleSet} contract
 (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}}, \code{\link[=expression]{expression()}},
-\code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}), never on this backend.
+\code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}), never on this backend.
 }
 \examples{
 \dontrun{

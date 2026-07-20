@@ -40,6 +40,16 @@ module_scores <- function(ms, ...) UseMethod('module_scores')
 #' @export
 expression <- function(ms, ...) UseMethod('expression')
 
+#' Underlying raw counts matrix backing a module set
+#'
+#' @param ms A `ModuleSet` object.
+#' @param ... Passed to methods.
+#' @return A genes-by-cells (or genes-by-samples) numeric matrix of raw
+#'   counts, aligned to [expression()], or `NULL` if the adapter doesn't
+#'   carry raw counts (see [capabilities()]`$counts`).
+#' @export
+counts <- function(ms, ...) UseMethod('counts')
+
 #' Cell / sample metadata for a module set
 #'
 #' @param ms A `ModuleSet` object.
@@ -65,30 +75,132 @@ pkg_versions <- function(ms, ...) UseMethod('pkg_versions')
 #' `gene_weights` (real per-gene membership weights, e.g. kME, not a uniform
 #' placeholder), `module_scores` (per-cell/sample module scores are
 #' available), `expression` (the backing expression matrix is available),
-#' `clusters` (a cell/sample-state grouping column was declared to the
-#' adapter), and `sample_ids` (a sample-id column was declared). Capabilities
-#' are declared by the adapter, not inferred from probing `metadata()` --
-#' declaring `clusters`/`sample_ids` is how a source advertises that it
-#' supports that concept at all, independent of which particular metadata
-#' column a tool is asked to use. Core tools consult this ([has_capability()])
-#' before running so they can skip gracefully instead of erroring when a
-#' capability the source doesn't support is required.
+#' `counts` (a raw counts matrix is available, see [counts()]), `grouping` (a
+#' cell/sample-state grouping column was declared to the adapter),
+#' `sample_ids` (a sample-id column was declared), and `pseudobulk` (the
+#' underlying data is already pseudobulk-aggregated rather than per-cell --
+#' `FALSE` for every current adapter; reserved for a future aggregation
+#' backend). Capabilities are declared by the adapter, not inferred from
+#' probing `metadata()` -- declaring `grouping`/`sample_ids` is how a source
+#' advertises that it supports that concept at all, independent of which
+#' particular metadata column a tool is asked to use. Core tools consult this
+#' ([has_capability()]) before running so they can skip gracefully instead of
+#' erroring when a capability the source doesn't support is required. See
+#' [validate_moduleset()] for the full contract check, including that this
+#' vector covers the whole vocabulary.
 #'
 #' @param ms A `ModuleSet` object.
 #' @param ... Passed to methods.
 #' @return A named logical vector over `c('gene_weights', 'module_scores',
-#'   'expression', 'clusters', 'sample_ids')`.
+#'   'expression', 'counts', 'grouping', 'sample_ids', 'pseudobulk')`.
 #' @export
 capabilities <- function(ms, ...) UseMethod('capabilities')
 
 #' Check whether a ModuleSet has a given capability
 #'
 #' @param ms A `ModuleSet` object.
-#' @param name A single capability name, e.g. `'clusters'`; see [capabilities()].
+#' @param name A single capability name, e.g. `'grouping'`; see [capabilities()].
 #' @return A single logical; `FALSE` if `name` isn't reported at all.
 #' @export
 has_capability <- function(ms, name){
     # single-bracket indexing (not `[[`) so a name capabilities() doesn't
     # report comes back NA, not a "subscript out of bounds" error
     isTRUE(capabilities(ms)[name])
+}
+
+.moduleset_capability_vocabulary <- c(
+    'gene_weights', 'module_scores', 'expression', 'counts', 'grouping', 'sample_ids', 'pseudobulk'
+)
+
+# calls a ModuleSet generic and turns a dispatch failure (no applicable
+# method, or the method itself erroring) into one consistently worded
+# validate_moduleset() error instead of a raw R error from deep inside the
+# adapter; `check` is an optional predicate on the successful result
+.validate_moduleset_call <- function(ms, generic_name, value, check = NULL){
+    result <- tryCatch(value, error = function(e){
+        stop(
+            'validate_moduleset: ', generic_name, '() did not dispatch for class ',
+            paste(class(ms), collapse = '/'), ': ', conditionMessage(e), call. = FALSE
+        )
+    })
+    if (!is.null(check) && !isTRUE(check(result))) {
+        stop(
+            'validate_moduleset: ', generic_name, '() returned an unexpected shape for class ',
+            paste(class(ms), collapse = '/'), call. = FALSE
+        )
+    }
+    result
+}
+
+#' Validate that a ModuleSet satisfies the full adapter contract
+#'
+#' Asserts that every required generic ([modules()], [gene_membership()],
+#' [module_scores()], [expression()], [counts()], [metadata()],
+#' [pkg_versions()], [capabilities()]) dispatches for `ms`'s class and
+#' returns the documented shape; that [capabilities()] covers the full
+#' vocabulary (see [capabilities()]) with `pseudobulk = FALSE` (the only
+#' value current adapters may report); that `ms$data_level` /
+#' `ms$aggregated` are a length-1 character / logical; and that
+#' [expression()], `metadata()`, [module_scores()], and [counts()] agree in
+#' dimensions wherever their capability is declared `TRUE`. Intended as a
+#' one-shot check for anyone writing a new adapter, and run automatically at
+#' the top of [run_orchestrator()].
+#'
+#' @param ms A `ModuleSet` object.
+#' @return Invisibly `TRUE` if valid; otherwise throws with the specific
+#'   contract violation.
+#' @examples
+#' validate_moduleset(llegir_example_moduleset())
+#' @export
+validate_moduleset <- function(ms){
+    mods <- .validate_moduleset_call(ms, 'modules', modules(ms), is.character)
+    if (length(mods) == 0) stop('validate_moduleset: modules(ms) returned no module ids')
+
+    caps <- .validate_moduleset_call(ms, 'capabilities', capabilities(ms), is.logical)
+    missing_caps <- setdiff(.moduleset_capability_vocabulary, names(caps))
+    if (length(missing_caps) > 0) {
+        stop('validate_moduleset: capabilities() is missing: ', paste(missing_caps, collapse = ', '))
+    }
+    if (!isFALSE(unname(caps[['pseudobulk']]))) {
+        stop('validate_moduleset: capabilities()$pseudobulk must be FALSE for every current adapter')
+    }
+
+    gm <- .validate_moduleset_call(ms, 'gene_membership', gene_membership(ms, mods[1]), is.data.frame)
+    if (!all(c('gene_name', 'module', 'kme') %in% colnames(gm))) {
+        stop('validate_moduleset: gene_membership() must return gene_name/module/kme columns')
+    }
+
+    meta <- .validate_moduleset_call(ms, 'metadata', metadata(ms), is.data.frame)
+    .validate_moduleset_call(ms, 'pkg_versions', pkg_versions(ms), is.list)
+
+    if (isTRUE(caps[['expression']])) {
+        expr <- .validate_moduleset_call(ms, 'expression', expression(ms), function(x) !is.null(dim(x)))
+        if (ncol(expr) != nrow(meta)) {
+            stop('validate_moduleset: expression() columns (', ncol(expr), ') and metadata() rows (',
+                 nrow(meta), ') must align')
+        }
+        if (isTRUE(caps[['module_scores']])) {
+            scores <- .validate_moduleset_call(ms, 'module_scores', module_scores(ms))
+            if (!is.null(scores) && nrow(scores) != ncol(expr)) {
+                stop('validate_moduleset: module_scores() rows must align with expression() columns')
+            }
+        }
+        if (isTRUE(caps[['counts']])) {
+            cnts <- .validate_moduleset_call(ms, 'counts', counts(ms))
+            if (is.null(cnts) || !identical(dim(cnts), dim(expr))) {
+                stop('validate_moduleset: counts() dimensions must match expression() when the counts capability is TRUE')
+            }
+        }
+    }
+
+    data_level <- ms$data_level
+    if (!is.character(data_level) || length(data_level) != 1) {
+        stop('validate_moduleset: data_level must be a length-1 character')
+    }
+    aggregated <- ms$aggregated
+    if (!is.logical(aggregated) || length(aggregated) != 1) {
+        stop('validate_moduleset: aggregated must be a length-1 logical')
+    }
+
+    invisible(TRUE)
 }

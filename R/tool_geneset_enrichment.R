@@ -68,7 +68,8 @@ geneset_enrichment_tool <- function(ctx){
     provenance <- make_provenance(
         tool_version = '0.2',
         params = list(n_hubs = n_hubs, db_files = unname(db_files), network_required = FALSE),
-        pkg_versions = pkg_versions(ctx$ms)
+        pkg_versions = pkg_versions(ctx$ms),
+        module_method = ctx$module_method %||% NA_character_
     )
 
     overlap_df <- do.call(rbind, lapply(names(db_files), function(db_name){

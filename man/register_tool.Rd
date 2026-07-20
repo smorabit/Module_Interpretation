@@ -22,7 +22,7 @@ here. A tool whose emitted type depends on its params (e.g.
 \item{description}{A one-line, human-readable description of what the tool does.}
 
 \item{requires}{The \code{ModuleSet} \code{\link[=capabilities]{capabilities()}} this tool needs to run:
-either a character vector (e.g. \code{c('clusters', 'module_scores')}), or a
+either a character vector (e.g. \code{c('grouping', 'module_scores')}), or a
 \verb{function(params) -> character vector} for a tool whose requirement
 depends on how it's called (e.g. \code{\link[=module_by_metadata_tool]{module_by_metadata_tool()}} only needs
 \code{sample_ids} for categorical columns). Default \code{character(0)} (no

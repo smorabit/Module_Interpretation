@@ -34,13 +34,18 @@
 #'   Either form's `params` is passed through as `ctx$params`.
 #' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
 #'   packet for provenance.
+#' @param module_method Optional free-form description of how the modules
+#'   themselves were generated, e.g. `'cNMF factors, k=20'`; see
+#'   [dataset_description()]. Passed through as `ctx$module_method`, and every
+#'   core tool records it on its fragment's provenance via
+#'   [make_provenance()]. Default `NA`.
 #' @return An evidence packet; see [build_evidence_packet()].
 #' @examples
 #' ms <- llegir_example_moduleset()
 #' run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
 #' @export
-run_module <- function(ms, module_id, tool_config, input_hash = NA_character_){
+run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, module_method = NA_character_){
     results <- lapply(tool_config, function(spec){
         if (!is.null(spec$id)) {
             tool <- get_tool(spec$id)
@@ -55,7 +60,7 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_){
         } else {
             fn <- spec$fn
         }
-        ctx <- list(ms = ms, module_id = module_id, params = spec$params)
+        ctx <- list(ms = ms, module_id = module_id, params = spec$params, module_method = module_method)
         list(fragment = fn(ctx), skip = NULL)
     })
     fragments <- Filter(Negate(is.null), lapply(results, `[[`, 'fragment'))
@@ -81,20 +86,28 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_){
 #' @param modules_use Optional subset of module ids to run; defaults to all
 #'   modules in `ms`.
 #' @param input_hash Optional hash of the input `ModuleSet`, recorded on each packet.
+#' @param module_method Optional free-form description of how the modules
+#'   themselves were generated; see [run_module()] / [dataset_description()].
+#'   Passed through to every [run_module()] call. Default `NA`.
+#' @param validate If `TRUE` (default), run [validate_moduleset()] on `ms`
+#'   before doing anything else, so a malformed adapter fails loudly up
+#'   front instead of partway through a batch.
 #' @return Invisibly, a named list of evidence packets (one per module; `NULL`
 #'   for any module that failed).
 #' @examples
 #' ms <- llegir_example_moduleset()
 #' run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
 #' @export
-run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL, input_hash = NA_character_){
+run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL,
+                              input_hash = NA_character_, module_method = NA_character_, validate = TRUE){
+    if (validate) validate_moduleset(ms)
     if (is.null(modules_use)) modules_use <- modules(ms)
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     if (!is.null(tables_dir)) dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
 
     packets <- lapply(modules_use, function(mod){
         packet <- tryCatch(
-            run_module(ms, mod, tool_config, input_hash = input_hash),
+            run_module(ms, mod, tool_config, input_hash = input_hash, module_method = module_method),
             error = function(e){
                 warning('module ', mod, ' failed: ', conditionMessage(e), call. = FALSE)
                 NULL

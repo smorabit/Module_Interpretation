@@ -36,9 +36,13 @@
 #'   [pkg_versions()] to.
 #' @param gene_sets A named list of character vectors, one per synthetic
 #'   module, e.g. `list(module_a = c('GENE1', 'GENE2'))`.
+#' @param data_level Observation-unit descriptor, e.g. `'cell'` or `'sample'`.
+#'   Default `'cell'`.
+#' @param aggregated Whether `expression()` is already aggregated across
+#'   cells (e.g. pseudobulk) rather than per-cell. Default `FALSE`.
 #' @param ms A `ModuleSet` object; the dispatch target for the generic
 #'   methods below ([modules()], [gene_membership()], [module_scores()],
-#'   [expression()], [metadata()], [pkg_versions()], [capabilities()]).
+#'   [expression()], [counts()], [metadata()], [pkg_versions()], [capabilities()]).
 #' @param module A single module id, as returned by [modules()].
 #' @param ... Passed to methods.
 #' @return A `synthetic_ModuleSet` object.
@@ -46,8 +50,11 @@
 #' ms <- llegir_example_moduleset()
 #' modules(ms)
 #' @export
-synthetic_ModuleSet <- function(base_ms, gene_sets){
-    structure(list(base_ms = base_ms, gene_sets = gene_sets), class = 'synthetic_ModuleSet')
+synthetic_ModuleSet <- function(base_ms, gene_sets, data_level = 'cell', aggregated = FALSE){
+    structure(
+        list(base_ms = base_ms, gene_sets = gene_sets, data_level = data_level, aggregated = aggregated),
+        class = 'synthetic_ModuleSet'
+    )
 }
 
 #' @rdname synthetic_ModuleSet
@@ -87,6 +94,10 @@ expression.synthetic_ModuleSet <- function(ms, ...) expression(ms$base_ms)
 
 #' @rdname synthetic_ModuleSet
 #' @export
+counts.synthetic_ModuleSet <- function(ms, ...) NULL
+
+#' @rdname synthetic_ModuleSet
+#' @export
 metadata.synthetic_ModuleSet <- function(ms, ...) metadata(ms$base_ms)
 
 #' @rdname synthetic_ModuleSet
@@ -98,15 +109,18 @@ pkg_versions.synthetic_ModuleSet <- function(ms, ...) pkg_versions(ms$base_ms)
 capabilities.synthetic_ModuleSet <- function(ms, ...){
     # module_scores()/gene_membership() are always computed here from
     # expression(), regardless of what base_ms itself provides, so those two
-    # capabilities are always TRUE; expression/clusters/sample_ids genuinely
-    # come from base_ms and are delegated
+    # capabilities are always TRUE; expression/grouping/sample_ids genuinely
+    # come from base_ms and are delegated; counts() is never computed here
+    # (no synthetic notion of raw counts), so it's always FALSE
     base_caps <- capabilities(ms$base_ms)
     c(
         gene_weights = TRUE,
         module_scores = TRUE,
         expression = isTRUE(base_caps[['expression']]),
-        clusters = isTRUE(base_caps[['clusters']]),
-        sample_ids = isTRUE(base_caps[['sample_ids']])
+        counts = FALSE,
+        grouping = isTRUE(base_caps[['grouping']]),
+        sample_ids = isTRUE(base_caps[['sample_ids']]),
+        pseudobulk = FALSE
     )
 }
 
@@ -166,6 +180,8 @@ capabilities.synthetic_ModuleSet <- function(ms, ...){
 #' @noRd
 expression.example_base_ModuleSet <- function(ms, ...) ms$expr
 #' @noRd
+counts.example_base_ModuleSet <- function(ms, ...) NULL
+#' @noRd
 metadata.example_base_ModuleSet <- function(ms, ...) ms$meta
 #' @noRd
 pkg_versions.example_base_ModuleSet <- function(ms, ...){
@@ -173,7 +189,10 @@ pkg_versions.example_base_ModuleSet <- function(ms, ...){
 }
 #' @noRd
 capabilities.example_base_ModuleSet <- function(ms, ...){
-    c(gene_weights = FALSE, module_scores = FALSE, expression = TRUE, clusters = TRUE, sample_ids = TRUE)
+    c(
+        gene_weights = FALSE, module_scores = FALSE, expression = TRUE, counts = FALSE,
+        grouping = TRUE, sample_ids = TRUE, pseudobulk = FALSE
+    )
 }
 
 #' A small, self-contained synthetic ModuleSet for examples and the vignette

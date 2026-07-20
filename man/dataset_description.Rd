@@ -10,7 +10,8 @@ dataset_description(
   cell_compartment,
   assay,
   conditions = character(0),
-  notes = NA_character_
+  notes = NA_character_,
+  module_method = NA_character_
 )
 }
 \arguments{
@@ -26,6 +27,12 @@ dataset_description(
 in the dataset.}
 
 \item{notes}{Optional free-text notes.}
+
+\item{module_method}{Optional free-form description of how the modules
+themselves were generated, e.g. \code{'hdWGCNA co-expression modules'} or
+\code{'cNMF factors, k=20'} -- disambiguates what a "module" means for this
+run (a co-expression program vs. a factorization component) since that
+changes how the model should interpret gene weights/usages.}
 }
 \value{
 A \code{dataset_description} object.

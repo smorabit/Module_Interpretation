@@ -53,7 +53,7 @@ test_that('pkg_versions() reports the backend packages', {
 test_that('capabilities() reports every capability TRUE for hdWGCNA_ModuleSet', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     caps <- capabilities(ms_test)
-    expect_true(all(caps[c('gene_weights', 'module_scores', 'expression', 'clusters', 'sample_ids')]))
+    expect_true(all(caps[c('gene_weights', 'module_scores', 'expression', 'grouping', 'sample_ids')]))
 })
 
 test_that('has_capability() is FALSE for a name capabilities() doesn\'t report', {

@@ -9,7 +9,7 @@ has_capability(ms, name)
 \arguments{
 \item{ms}{A \code{ModuleSet} object.}
 
-\item{name}{A single capability name, e.g. \code{'clusters'}; see \code{\link[=capabilities]{capabilities()}}.}
+\item{name}{A single capability name, e.g. \code{'grouping'}; see \code{\link[=capabilities]{capabilities()}}.}
 }
 \value{
 A single logical; \code{FALSE} if \code{name} isn't reported at all.

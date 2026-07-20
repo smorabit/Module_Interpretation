@@ -285,15 +285,21 @@ write_fragment_tables <- function(packet, tables_dir){
 #'   the `ModuleSet`'s own [pkg_versions()].
 #' @param source `'computed'` (default, tool-produced) or `'user_supplied'`
 #'   (set automatically by [import_fragment()]).
+#' @param module_method Optional free-form description of how the modules
+#'   themselves were generated, e.g. `'cNMF factors, k=20'`; see
+#'   [dataset_description()]. Threaded through from [run_module()] /
+#'   [run_orchestrator()]'s `module_method` argument, when given. Default `NA`.
 #' @return A provenance list suitable for [evidence_fragment()]'s `provenance` argument.
 #' @export
-make_provenance <- function(tool_version, params = list(), input_hashes = list(), pkg_versions = list(), source = 'computed'){
+make_provenance <- function(tool_version, params = list(), input_hashes = list(), pkg_versions = list(),
+                             source = 'computed', module_method = NA_character_){
     list(
         tool_version = tool_version,
         params = params,
         input_hashes = input_hashes,
         pkg_versions = pkg_versions,
         source = source,
+        module_method = module_method,
         timestamp = format(Sys.time(), '%Y-%m-%dT%H:%M:%S%z')
     )
 }

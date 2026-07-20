@@ -10,7 +10,9 @@ run_orchestrator(
   output_dir,
   tables_dir = NULL,
   modules_use = NULL,
-  input_hash = NA_character_
+  input_hash = NA_character_,
+  module_method = NA_character_,
+  validate = TRUE
 )
 }
 \arguments{
@@ -27,6 +29,14 @@ result table.}
 modules in \code{ms}.}
 
 \item{input_hash}{Optional hash of the input \code{ModuleSet}, recorded on each packet.}
+
+\item{module_method}{Optional free-form description of how the modules
+themselves were generated; see \code{\link[=run_module]{run_module()}} / \code{\link[=dataset_description]{dataset_description()}}.
+Passed through to every \code{\link[=run_module]{run_module()}} call. Default \code{NA}.}
+
+\item{validate}{If \code{TRUE} (default), run \code{\link[=validate_moduleset]{validate_moduleset()}} on \code{ms}
+before doing anything else, so a malformed adapter fails loudly up
+front instead of partway through a batch.}
 }
 \value{
 Invisibly, a named list of evidence packets (one per module; \code{NULL}
