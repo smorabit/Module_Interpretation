@@ -16,6 +16,25 @@ knitr::opts_chunk$set(
 # data/ and output/ paths in this vignette are relative to the package root,
 # so evaluate chunks there rather than in vignettes/
 knitr::opts_knit$set(root.dir = normalizePath('..'))
+
+# data/CSF_Myeloid_hdWGCNA.rds is a large, gitignored/buildignored dev-only
+# fixture (see .Rbuildignore) -- it exists on a dev machine but never inside
+# the tarball R CMD check builds and runs against, so every chunk below is
+# skipped there instead of erroring on a missing file
+data_available <- file.exists('data/CSF_Myeloid_hdWGCNA.rds')
+knitr::opts_chunk$set(eval = data_available)
+```
+
+```{r, echo = FALSE, eval = TRUE, results = 'asis'}
+if (!data_available) {
+    cat(
+        "*This vignette's code chunks require a local ",
+        "`data/CSF_Myeloid_hdWGCNA.rds` dev fixture (gitignored and build-ignored, ",
+        "not shipped with the package) and are skipped here. ",
+        "The prose below still walks through the full workflow.*\n",
+        sep = ''
+    )
+}
 ```
 
 **llegir** is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, **llegir** gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and drafts an evidence-backed interpretation via a LLM-enabled synthesis layer.
@@ -28,7 +47,7 @@ In this vignette, we demonstrate **llegir** using a scRNA-seq dataset of myeloid
 
 To start the **llegir** pipeline, we first define the `ModuleSet`, which contains the following attributes: `modules()`, `gene_membership()`, `module_scores()`, `expression()`, `metadata()`, `capabilities()`, `pkg_versions()`. The function `hdWGCNA_ModuleSet()` automatically formats the `ModuleSet` object for hdWGCNA results, but this framework is flexible to modules from other packages.
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE, purl = FALSE}
 library(Seurat)
 library(hdWGCNA)
 library(tidyverse)
@@ -46,11 +65,11 @@ modules(ms)
 A quick look at the two attributes most tools lean on: the ranked
 gene membership of a module and the cell-level metadata.
 
-```{r}
+```{r, purl = FALSE}
 head(gene_membership(ms, 'MM1'))
 ```
 
-```{r}
+```{r, purl = FALSE}
 head(metadata(ms))
 ```
 
@@ -58,7 +77,7 @@ head(metadata(ms))
 
 Each module is characterized by running a set of analysis tools. Every tool takes the same inputs (the `ModuleSet`, a module, and some parameters, bundled together as `ctx`) and returns one `evidence_fragment`: a standardized summary of what that tool found. To demonstrate this, we run a single tool on its own to see what it produces:
 
-```{r}
+```{r, purl = FALSE}
 
 # set up the context (ctx) for the tool
 ctx <- list(ms = ms, module_id = 'MM1', params = list(n_hubs = 10))
@@ -84,7 +103,7 @@ Additionally, external results you have already computed elsewhere can be levera
 
 We run a chain of tools over the module set using `run_orchestrator()`, which then collects the results into one **evidence packet** per module, saved as a JSON file. The tool list pairs each tool (`fn`) with its parameters, and `modules_use` limits the run to three modules for this example:
 
-```{r}
+```{r, purl = FALSE}
 modules_use <- c('MM1', 'MM2', 'MM3')
 
 tool_config <- list(
@@ -106,7 +125,7 @@ Each packet holds its evidence fragments plus a `packet_hash`, a fingerprint of
 the evidence it contains. The same evidence always produces the same hash, which
 makes runs easy to track and reproduce.
 
-```{r}
+```{r, purl = FALSE}
 packet <- packets[['MM1']]
 packet$packet_hash
 length(packet$fragments)
@@ -116,7 +135,7 @@ length(packet$fragments)
 
 Before interpreting the modules, we provide a brief description of the dataset `dataset_description()`. This biological context is given to the model so it interprets each module in an appropriate setting (the same gene program can mean something different in CSF myeloid cells than in a solid tumor). It is required: **llegir** will not run synthesis without it.
 
-```{r}
+```{r, purl = FALSE}
 desc <- dataset_description(
     species = 'human',
     tissue = 'cerebrospinal fluid (CSF)',
@@ -143,7 +162,7 @@ environment (e.g. `GITHUB_PAT` or `GEMINI_API_KEY`). Wrapping it in
 `cached_backend()` saves each result to disk, so re-running synthesis on
 unchanged packets doesn't spend another API call.
 
-```{r}
+```{r, purl = FALSE}
 backend <- cached_backend(
     resolve_backend('github'),
     provider = 'github',
@@ -157,7 +176,7 @@ interps <- run_synthesis_orchestrator(packets, desc, backend = backend, output_d
 Inspect one interpretation: its proposed label, fused confidence, and the
 rendered paragraph.
 
-```{r}
+```{r, purl = FALSE}
 interp <- interps[['MM1']]
 interp$proposed_label
 interp$confidence$score
@@ -168,6 +187,6 @@ The review queue (`build_review_queue()`) collects only the interpretations
 flagged for a closer look (`needs_review()`), sorted lowest-confidence first,
 so you know which modules to check by hand:
 
-```{r}
+```{r, purl = FALSE}
 build_review_queue(interps)
 ```
