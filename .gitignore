@@ -2,6 +2,7 @@
 data/
 output/
 figures/
+sample_code/
 *.rds
 *.rda
 *.feather
