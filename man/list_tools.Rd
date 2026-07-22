@@ -4,7 +4,12 @@
 \alias{list_tools}
 \title{List every registered tool id}
 \usage{
-list_tools()
+list_tools(scope = NULL)
+}
+\arguments{
+\item{scope}{Filter by \code{\link[=register_tool]{register_tool()}}'s \code{scope}: \code{NULL} (default)
+returns every registered tool, \code{'module'} or \code{'dataset'} returns only
+tools registered with that scope.}
 }
 \value{
 A sorted character vector of tool ids.
@@ -14,4 +19,5 @@ List every registered tool id
 }
 \examples{
 list_tools()
+list_tools('dataset')
 }

@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dataset_fragment.schema.json",
+  "title": "dataset_fragment",
+  "schema_version": "0.1",
+  "type": "object",
+  "description": "One dataset-level tool's global summary of the whole experiment. Sibling of evidence_fragment: no module_id, no fusion fields (effect_strength/significance/direction); descriptive framing bundled into a dataset_context, injected into synthesis prompts alongside dataset_description. Never enters fusion or faithfulness.",
+  "required": [
+    "fragment_id", "tool_id", "type", "result",
+    "compact_summary", "top_findings", "provenance"
+  ],
+  "properties": {
+    "fragment_id": {
+      "type": "string",
+      "description": "unique within a dataset_context, e.g. 'composition' or 'milo::abundance'"
+    },
+    "tool_id": { "type": "string" },
+    "type": {
+      "enum": [
+        "composition_summary", "baseline_expression",
+        "variance_structure", "module_landscape"
+      ]
+    },
+    "result": {
+      "type": "array",
+      "description": "small tidy summary table (never the raw matrix), serialized row-oriented",
+      "items": { "type": "object" }
+    },
+    "compact_summary": {
+      "type": "string",
+      "description": "short digest for the model; self-describes the unit via data_level/aggregated; no raw tables"
+    },
+    "top_findings": {
+      "type": "array",
+      "description": "the most salient items (cell states / covariates / genes) with values"
+    },
+    "caveats": {
+      "type": "array",
+      "description": "machine-readable confounder flags surfaced to the model; controlled vocab (kept in lockstep with .dataset_caveat_vocab in R/dataset_fragment.R)",
+      "items": {
+        "enum": [
+          "condition_confounded_with_batch",
+          "cell_state_imbalanced_across_condition",
+          "hub_genes_are_housekeeping",
+          "underpowered_contrast"
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["tool_version", "params", "input_hashes", "pkg_versions", "timestamp"],
+      "properties": {
+        "tool_version": { "type": "string" },
+        "params": { "type": "object" },
+        "input_hashes": { "type": "object" },
+        "pkg_versions": { "type": "object" },
+        "timestamp": { "type": "string" },
+        "source": {
+          "enum": ["computed", "user_supplied"],
+          "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_dataset_fragment()/import_milo_da()"
+        }
+      }
+    }
+  }
+}

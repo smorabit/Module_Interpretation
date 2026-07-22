@@ -108,7 +108,56 @@ The boilerplate paragraph is produced by a deterministic template that reads onl
 
 ---
 
-## 3. JSON Schema (authoritative, abbreviated)
+## 3. Dataset fragment
+
+One fragment = one dataset-level tool's global summary of the whole experiment. Sibling of the evidence fragment: scoped to the whole dataset rather than one module, so it drops `module_id` and the fusion fields (`effect_strength`/`significance`/`direction`) and adds `caveats`. Descriptive framing only — never enters `calculate_fusion_score()` or `enforce_faithfulness()`.
+
+### Fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `fragment_id` | string | yes | unique within a `dataset_context`, e.g. `"composition"` or `"milo::abundance"` |
+| `tool_id` | string | yes | which tool produced it |
+| `type` | enum | yes | controlled vocab (below) |
+| `result` | table | yes | small tidy summary (data.frame); never the raw matrix |
+| `compact_summary` | string | yes | short digest for the model (token-efficient, no raw tables) |
+| `top_findings` | list | yes | the few most salient items (cell states / covariates / genes) with values |
+| `caveats` | list | no | machine-readable confounder flags (below) |
+| `provenance` | object | yes | same shape as the evidence fragment's, built with `make_provenance()` |
+
+### `type` controlled vocabulary
+
+`composition_summary`, `baseline_expression`, `variance_structure`, `module_landscape`. Extend deliberately; mirrors `.dataset_fragment_types` in `R/dataset_fragment.R`.
+
+### `caveats` controlled vocabulary
+
+`condition_confounded_with_batch`, `cell_state_imbalanced_across_condition`, `hub_genes_are_housekeeping`, `underpowered_contrast`. Mirrors `.dataset_caveat_vocab` in `R/dataset_fragment.R`; grow per tool.
+
+### R constructor (sketch)
+
+```r
+dataset_fragment <- function(fragment_id, tool_id, type, result, compact_summary,
+                             top_findings, caveats = list(), provenance = list()){
+    frag <- list(
+        fragment_id = fragment_id,
+        tool_id = tool_id,
+        type = match.arg(type, .dataset_fragment_types),
+        result = result,
+        compact_summary = compact_summary,
+        top_findings = top_findings,
+        caveats = caveats,
+        provenance = provenance
+    )
+    structure(frag, class = 'dataset_fragment')
+}
+validate_dataset_fragment <- function(frag){ ... }   # assert required fields, types
+```
+
+A **dataset context** is `list(dataset_fragments = list(<dataset_fragment>, ...), context_hash, schema_version, provenance)` — the once-per-dataset analog of an evidence packet (`build_dataset_context()` in `R/dataset_fragment.R`), computed once and injected into every module's synthesis prompt above the per-module evidence packet.
+
+---
+
+## 4. JSON Schema (authoritative, abbreviated)
 
 Keep a real `evidence_fragment.schema.json` and `interpretation.schema.json` in the repo under `schemas/` (move to `inst/schemas/` once it's packaged later). Sketch:
 
@@ -132,8 +181,8 @@ Keep a real `evidence_fragment.schema.json` and `interpretation.schema.json` in 
 
 ## Versioning
 
-Both schemas carry a `schema_version`. Evidence packets and interpretation objects record the version they were produced under. Breaking changes bump the major version and are noted here.
+Every schema carries a `schema_version`. Evidence packets, dataset contexts, and interpretation objects record the version they were produced under. Breaking changes bump the major version and are noted here.
 
 ---
 
-*Last updated: 2026-07-10*
+*Last updated: 2026-07-22*

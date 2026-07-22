@@ -10,7 +10,8 @@ register_tool(
   type,
   description,
   requires = character(0),
-  tier = "medium"
+  tier = "medium",
+  scope = "module"
 )
 }
 \arguments{
@@ -35,7 +36,14 @@ depends on how it's called. Default \code{character(0)} (no requirement).}
 
 \item{tier}{Structural importance tier consulted by
 \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} to weight this tool's fragments: one of
-\code{'high'}, \code{'medium'}, \code{'low'}. Default \code{'medium'}.}
+\code{'high'}, \code{'medium'}, \code{'low'}. Default \code{'medium'}. Ignored when
+\code{scope == 'dataset'} -- dataset fragments never enter fusion.}
+
+\item{scope}{Whether this tool runs per module (default) or once per
+dataset: one of \code{'module'}, \code{'dataset'}. A \code{'module'} tool's \code{type} is
+checked against the \code{\link[=evidence_fragment]{evidence_fragment()}} vocabulary; a \code{'dataset'}
+tool's \code{type} against the \code{\link[=dataset_fragment]{dataset_fragment()}} vocabulary. Default
+\code{'module'}.}
 }
 \value{
 \code{id}, invisibly.

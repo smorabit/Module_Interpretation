@@ -42,7 +42,13 @@
 #'   depends on how it's called. Default `character(0)` (no requirement).
 #' @param tier Structural importance tier consulted by
 #'   [calculate_fusion_score()] to weight this tool's fragments: one of
-#'   `'high'`, `'medium'`, `'low'`. Default `'medium'`.
+#'   `'high'`, `'medium'`, `'low'`. Default `'medium'`. Ignored when
+#'   `scope == 'dataset'` -- dataset fragments never enter fusion.
+#' @param scope Whether this tool runs per module (default) or once per
+#'   dataset: one of `'module'`, `'dataset'`. A `'module'` tool's `type` is
+#'   checked against the [evidence_fragment()] vocabulary; a `'dataset'`
+#'   tool's `type` against the [dataset_fragment()] vocabulary. Default
+#'   `'module'`.
 #' @return `id`, invisibly.
 #' @examples
 #' my_tool <- function(ctx) top_genes_tool(ctx)
@@ -51,15 +57,17 @@
 #'     description = 'demo', requires = character(0)
 #' )
 #' @export
-register_tool <- function(id, fn, type, description, requires = character(0), tier = 'medium'){
+register_tool <- function(id, fn, type, description, requires = character(0), tier = 'medium', scope = 'module'){
     if (!is.character(id) || length(id) != 1) stop('id must be a single string')
     if (!is.function(fn)) stop('fn must be a function')
-    if (!all(type %in% .fragment_types)) stop('invalid type: ', paste(setdiff(type, .fragment_types), collapse = ', '))
+    if (!(scope %in% c('module', 'dataset'))) stop("scope must be one of 'module', 'dataset'")
+    valid_types <- if (scope == 'dataset') .dataset_fragment_types else .fragment_types
+    if (!all(type %in% valid_types)) stop('invalid type: ', paste(setdiff(type, valid_types), collapse = ', '))
     if (!is.function(requires) && !is.character(requires)) stop('requires must be a character vector or a function(params)')
     if (!(tier %in% c('high', 'medium', 'low'))) stop("tier must be one of 'high', 'medium', 'low'")
 
     spec <- structure(
-        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier),
+        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier, scope = scope),
         class = 'tool_spec'
     )
     assign(id, spec, envir = .tool_registry)
@@ -80,12 +88,19 @@ get_tool <- function(id){
 
 #' List every registered tool id
 #'
+#' @param scope Filter by [register_tool()]'s `scope`: `NULL` (default)
+#'   returns every registered tool, `'module'` or `'dataset'` returns only
+#'   tools registered with that scope.
 #' @return A sorted character vector of tool ids.
 #' @examples
 #' list_tools()
+#' list_tools('dataset')
 #' @export
-list_tools <- function(){
-    sort(ls(envir = .tool_registry))
+list_tools <- function(scope = NULL){
+    ids <- sort(ls(envir = .tool_registry))
+    if (is.null(scope)) return(ids)
+    if (!(scope %in% c('module', 'dataset'))) stop("scope must be one of 'module', 'dataset'")
+    Filter(function(id) get_tool(id)$scope == scope, ids)
 }
 
 # the required capabilities for one call: requires may be a static vector or
