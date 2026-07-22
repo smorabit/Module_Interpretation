@@ -64,6 +64,34 @@
             }
           },
           {
+            "id": "22e1c9d01209458f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/milestones/milestone_dataset_tools.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "milestone_dataset_tools"
+            }
+          },
+          {
+            "id": "cafcacff17b9b4bc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "2026-07-22.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2026-07-22"
+            }
+          },
+          {
             "id": "683540b5e36ac53f",
             "type": "leaf",
             "state": {
@@ -78,7 +106,7 @@
             }
           }
         ],
-        "currentTab": 3
+        "currentTab": 5
       }
     ],
     "direction": "vertical"
@@ -151,7 +179,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/2026-07-21.md",
+                "file": "2026-07-22.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -161,7 +189,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for 2026-07-21"
+              "title": "Backlinks for 2026-07-22"
             }
           },
           {
@@ -170,12 +198,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/2026-07-21.md",
+                "file": "2026-07-22.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from 2026-07-21"
+              "title": "Outgoing links from 2026-07-22"
             }
           },
           {
@@ -213,13 +241,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/2026-07-21.md",
+                "file": "2026-07-22.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of 2026-07-21"
+              "title": "Outline of 2026-07-22"
             }
           }
         ]
@@ -240,24 +268,26 @@
       "bases:Create new base": false
     }
   },
-  "active": "75a5fd64601dfce9",
+  "active": "cafcacff17b9b4bc",
   "lastOpenFiles": [
-    "inst/templates/pandoc1293f109c76d.html",
+    "tests/testthat/_snaps",
+    "docs/milestones/milestone_dataset_tools.md",
+    "man/dataset_composition_tool.Rd",
+    "2026-07-22.md",
+    "tests/testthat/test-dataset_composition.R",
+    "R/registry.R.tmp.97266.c42890058fee",
+    "R/dataset_tools.R",
+    "docs/prompts/handoff_prompt_dataset_tools.md",
+    "man/render_dataset_context_compact.Rd",
+    "man/run_dataset_context.Rd",
+    "tests/testthat/test-dataset_orchestrator.R",
+    "R/orchestrator.R.tmp.97266.11456a838e81",
+    "man/read_dataset_context.Rd",
+    "docs/2026-07-21.md",
     "inst/templates/summary_report.knit.md",
-    "output/cache/f9abe0bdacd91306298929d2ab2ec265ca4fd00952af405b55b6b438ac93e441.rds",
-    "output/cache/e6883e4538b16bf9ff8f2b35d277ed3f2e0f6b2e93bf95e84db7eb7699a8cbf1.rds",
-    "output/cache/854c4d8757696594dcdec2fa69f72c520f45de0066fc018d172b09ac09f725ab.rds",
-    "inst/templates/summary_report.Rmd.tmp.97266.70f02251eb36",
     "docs/prompts/handoff_prompt_extensibility_1.md",
     "docs/prompts/handoff_prompt_extensibility_2.md",
     "docs/milestones/milestone_fused_confidence.md",
-    "tests/testthat/_snaps",
-    "man/calculate_fusion_score.Rd",
-    "R/registry.R.tmp.97266.85a1d4846fe8",
-    "docs/2026-07-21.md",
-    "_stale_git_locks/index.lock.final.1784645555525060557",
-    "_stale_git_locks/index.lock.1784645429",
-    "_stale_git_locks",
     "docs/prompts/handoff_prompt_fused_confidence.md",
     "docs/overview.md",
     "docs/milestones/milestone_pseudobulk.md",
@@ -275,9 +305,6 @@
     "CLAUDE.md",
     "docs/milestones/milestone2_verification.md",
     "docs/milestones/milestone_2.md",
-    "docs/milestones/milestone_packaging.md",
-    "docs/repo_map.md",
-    "CLAUDE_old.md",
     "pkgdown_site/link.svg"
   ]
 }

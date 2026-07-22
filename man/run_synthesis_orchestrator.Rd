@@ -12,7 +12,8 @@ run_synthesis_orchestrator(
   temperature = 0,
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
+  dataset_context = NULL
 )
 }
 \arguments{
@@ -36,6 +37,11 @@ interpretation's provenance.}
 
 \item{schema_path}{Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.}
+
+\item{dataset_context}{An optional dataset context, as built by
+\code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}. Computed once and
+passed to every module's \code{\link[=synthesize_module]{synthesize_module()}} call, exactly like
+\code{desc}. \code{NULL} (default) omits the DATASET CONTEXT block.}
 }
 \value{
 Invisibly, a named list of interpretation objects (one per module;

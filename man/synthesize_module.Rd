@@ -12,7 +12,8 @@ synthesize_module(
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
   schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
-  user_weights = list()
+  user_weights = list(),
+  dataset_context = NULL
 )
 }
 \arguments{
@@ -39,6 +40,12 @@ schema shipped with the package.}
 prompt's EVIDENCE CONFIDENCE MATRIX and \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
 printed fusion string can never drift from what the model was shown.
 Default \code{list()}.}
+
+\item{dataset_context}{An optional dataset context, as built by
+\code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into
+\code{\link[=build_user_prompt]{build_user_prompt()}} as global framing. Never enters
+\code{\link[=calculate_fusion_score]{calculate_fusion_score()}} or \code{\link[=enforce_faithfulness]{enforce_faithfulness()}}. \code{NULL} (default)
+omits the DATASET CONTEXT block.}
 }
 \value{
 A validated \code{interpretation} object.

@@ -9,7 +9,7 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '0.3'
+PROMPT_TEMPLATE_VERSION <- '0.4'
 
 # net directional sign of the pooled evidence mass, for the matrix's
 # CONSTRAINTS block -- mirrors R/confidence.R's .directional_coherence()
@@ -97,6 +97,53 @@ render_packet_compact <- function(packet, max_findings = 8){
     )
 }
 
+# a dataset_fragment's compact block: mirrors .render_fragment_compact() but
+# there's no direction/effect_strength/significance (dataset_fragment drops
+# the fusion fields), and caveats are appended when present
+.render_dataset_fragment_compact <- function(frag, max_findings = 8){
+    header <- sprintf('[%s] type=%s', frag$fragment_id, frag$type)
+    findings <- utils::head(frag$top_findings, max_findings)
+    findings_json <- jsonlite::toJSON(findings, auto_unbox = TRUE, na = 'null')
+    lines <- c(header, frag$compact_summary, paste0('top_findings: ', findings_json))
+    if (length(frag$caveats) > 0) {
+        lines <- c(lines, paste0('caveats: ', paste(unlist(frag$caveats), collapse = ', ')))
+    }
+    paste(lines, collapse = '\n')
+}
+
+#' Render a dataset context as a compact model-facing text block
+#'
+#' Renders only the compact, curated fields of each `dataset_fragment`
+#' (`compact_summary`, `top_findings`, `caveats`) -- never the raw `result`
+#' tables -- mirroring [render_packet_compact()]. Injected once per dataset
+#' into every module's prompt via [build_user_prompt()]'s `dataset_context`
+#' argument; unlike the per-module evidence packet, this block is global
+#' framing and never enters fusion or faithfulness.
+#'
+#' @param dataset_context A dataset context, as built by [build_dataset_context()].
+#' @param max_findings Maximum number of `top_findings` entries rendered per
+#'   fragment. Default `8`.
+#' @return A single character string.
+#' @examples
+#' frag <- dataset_fragment(
+#'     'composition', 'dataset_composition_tool', 'composition_summary',
+#'     data.frame(group = 'A', n = 10), 'One group, 10 cells.', list(),
+#'     provenance = make_provenance('dataset_composition_tool', '0.1', list(), list(), NA_character_)
+#' )
+#' ctx <- build_dataset_context(list(frag))
+#' cat(render_dataset_context_compact(ctx))
+#' @export
+render_dataset_context_compact <- function(dataset_context, max_findings = 8){
+    blocks <- vapply(
+        dataset_context$dataset_fragments, .render_dataset_fragment_compact,
+        character(1), max_findings = max_findings
+    )
+    paste0(
+        'DATASET CONTEXT (', length(dataset_context$dataset_fragments), ' fragments):\n\n',
+        paste(blocks, collapse = '\n\n')
+    )
+}
+
 #' Build the synthesis system prompt
 #'
 #' A fixed set of rules governing how a backend must fill the model-facing
@@ -128,15 +175,17 @@ build_system_prompt <- function(){
         '- Every quantitative certainty statement in your response must reference E_evidence rather than restating your own separate estimate.',
         '- You may not assert a direction (e.g. in dominant_biology or condition_dynamics) that contradicts the sign of the directional coherence reported in the matrix.',
         '- literature must be left empty; literature grounding is not available in this pipeline.',
+        '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims or metadata_associations.',
         sep = '\n'
     )
 }
 
 #' Build the synthesis user prompt for one module
 #'
-#' Concatenates the rendered [dataset_description()], the compact evidence
-#' packet ([render_packet_compact()]), and the deterministic EVIDENCE
-#' CONFIDENCE MATRIX ([calculate_fusion_score()]) that grounds the model's
+#' Concatenates the rendered [dataset_description()], the optional
+#' [render_dataset_context_compact()] block, the compact evidence packet
+#' ([render_packet_compact()]), and the deterministic EVIDENCE CONFIDENCE
+#' MATRIX ([calculate_fusion_score()]) that grounds the model's
 #' `confidence.score` in the same numbers [fuse_confidence()] later
 #' re-derives the final fused score from.
 #'
@@ -152,6 +201,11 @@ build_system_prompt <- function(){
 #'   aggregated across cells; see [render_dataset_description()]. Default `FALSE`.
 #' @param user_weights Named list of per-`tool_id` weight multipliers passed
 #'   to [calculate_fusion_score()] when `fusion` is `NULL`. Default `list()`.
+#' @param dataset_context An optional dataset context, as built by
+#'   [build_dataset_context()] / [run_dataset_context()]. Rendered via
+#'   [render_dataset_context_compact()] between the dataset description and
+#'   the evidence packet. `NULL` (default) omits the block entirely, matching
+#'   prior prompt output exactly.
 #' @return A single character string.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -159,14 +213,15 @@ build_system_prompt <- function(){
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' cat(build_user_prompt(packet, desc))
 #' @export
-build_user_prompt <- function(packet, desc, fusion = NULL, data_level = 'cell', aggregated = FALSE, user_weights = list()){
+build_user_prompt <- function(packet, desc, fusion = NULL, data_level = 'cell', aggregated = FALSE,
+                               user_weights = list(), dataset_context = NULL){
     fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
-    paste(
+    dataset_block <- if (is.null(dataset_context)) NULL else render_dataset_context_compact(dataset_context)
+    blocks <- Filter(Negate(is.null), list(
         render_dataset_description(desc, data_level = data_level, aggregated = aggregated),
-        '',
+        dataset_block,
         render_packet_compact(packet),
-        '',
-        .render_confidence_matrix(fusion),
-        sep = '\n'
-    )
+        .render_confidence_matrix(fusion)
+    ))
+    paste(blocks, collapse = '\n\n')
 }

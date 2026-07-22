@@ -123,6 +123,65 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
     invisible(packets)
 }
 
+#' Build a dataset context once per dataset
+#'
+#' The dataset-level analog of [run_orchestrator()]: runs every tool in
+#' `dataset_tool_config` once against the whole `ModuleSet` (never per
+#' module) and bundles the resulting `dataset_fragment`s into a validated,
+#' hashed dataset context via [build_dataset_context()]. Mirrors
+#' [run_module()]'s spec handling exactly, except `ctx` has no `module_id`
+#' -- a dataset tool reads `expression(ms)`/`metadata(ms)`/`module_scores(ms)`
+#' in full, not for one module.
+#'
+#' @param ms A `ModuleSet`.
+#' @param dataset_tool_config A list of tool specs, each one of:
+#'   * `list(fn, params)` -- a direct call to any `function(ctx) ->
+#'     dataset_fragment` (or `NULL`, to skip); the tool is responsible for
+#'     its own graceful capability-based skip.
+#'   * `list(id, params)` -- `id` is looked up in the tool registry (see
+#'     [register_tool()]), and `run_dataset_context()` checks the tool's
+#'     declared required [capabilities()] before calling it. If unmet, the
+#'     tool is skipped and the reason is recorded on the context's
+#'     `provenance$skipped`.
+#'
+#'   Either form's `params` is passed through as `ctx$params`.
+#' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
+#'   context for provenance.
+#' @param module_method Optional free-form description of how the modules
+#'   themselves were generated; see [run_module()] / [dataset_description()].
+#'   Passed through as `ctx$module_method`. Default `NA`.
+#' @param validate If `TRUE` (default), run [validate_moduleset()] on `ms`
+#'   before doing anything else.
+#' @return A dataset context; see [build_dataset_context()].
+#' @examples
+#' ms <- llegir_example_moduleset()
+#' run_dataset_context(ms, list())
+#' @export
+run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_character_,
+                                 module_method = NA_character_, validate = TRUE){
+    if (validate) validate_moduleset(ms)
+    results <- lapply(dataset_tool_config, function(spec){
+        if (!is.null(spec$id)) {
+            tool <- get_tool(spec$id)
+            required <- .tool_spec_requires(tool, spec$params)
+            missing_caps <- required[!vapply(required, function(cap) has_capability(ms, cap), logical(1))]
+            if (length(missing_caps) > 0) {
+                reason <- paste0('missing capabilities: ', paste(missing_caps, collapse = ', '))
+                message(spec$id, ': skipped, ', reason)
+                return(list(fragment = NULL, skip = list(tool_id = spec$id, reason = reason)))
+            }
+            fn <- tool$fn
+        } else {
+            fn <- spec$fn
+        }
+        ctx <- list(ms = ms, params = spec$params, module_method = module_method)
+        list(fragment = fn(ctx), skip = NULL)
+    })
+    fragments <- Filter(Negate(is.null), lapply(results, `[[`, 'fragment'))
+    skipped <- Filter(Negate(is.null), lapply(results, `[[`, 'skip'))
+    build_dataset_context(fragments, input_hash = input_hash, skipped = skipped)
+}
+
 ## synthesis-stage orchestration (docs/milestone_2.md tasks 5-7): mirrors
 ## run_module()/run_orchestrator() above but for the packet -> interpretation
 ## stage. Kept in this file rather than a separate one since it's the same
@@ -153,6 +212,11 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 #'   prompt's EVIDENCE CONFIDENCE MATRIX and [fuse_confidence()], so the
 #'   printed fusion string can never drift from what the model was shown.
 #'   Default `list()`.
+#' @param dataset_context An optional dataset context, as built by
+#'   [build_dataset_context()] / [run_dataset_context()], threaded into
+#'   [build_user_prompt()] as global framing. Never enters
+#'   [calculate_fusion_score()] or [enforce_faithfulness()]. `NULL` (default)
+#'   omits the DATASET CONTEXT block.
 #' @return A validated `interpretation` object.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -163,12 +227,12 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
-                               user_weights = list()){
+                               user_weights = list(), dataset_context = NULL){
     fusion <- calculate_fusion_score(packet$fragments, user_weights = user_weights)
     interp <- synthesize_interpretation(
         packet, desc, backend, temperature = temperature, seed = seed,
         prompt_template_version = prompt_template_version, schema_path = schema_path,
-        user_weights = user_weights, fusion = fusion
+        user_weights = user_weights, fusion = fusion, dataset_context = dataset_context
     )
     interp <- enforce_faithfulness(interp, packet)
     interp <- fuse_confidence(interp, packet, user_weights = user_weights, fusion = fusion)
@@ -198,6 +262,10 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
+#' @param dataset_context An optional dataset context, as built by
+#'   [build_dataset_context()] / [run_dataset_context()]. Computed once and
+#'   passed to every module's [synthesize_module()] call, exactly like
+#'   `desc`. `NULL` (default) omits the DATASET CONTEXT block.
 #' @return Invisibly, a named list of interpretation objects (one per module;
 #'   `NULL` for any module whose synthesis failed).
 #' @examples
@@ -208,7 +276,8 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
 #' @export
 run_synthesis_orchestrator <- function(packets, desc, backend, output_dir, temperature = 0, seed = NA_real_,
                                         prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
+                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
+                                        dataset_context = NULL){
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     mods <- names(packets)
 
@@ -218,7 +287,8 @@ run_synthesis_orchestrator <- function(packets, desc, backend, output_dir, tempe
         interp <- tryCatch(
             synthesize_module(
                 packet, desc, backend, temperature = temperature, seed = seed,
-                prompt_template_version = prompt_template_version, schema_path = schema_path
+                prompt_template_version = prompt_template_version, schema_path = schema_path,
+                dataset_context = dataset_context
             ),
             error = function(e){
                 warning('synthesis failed for module ', mod, ': ', conditionMessage(e), call. = FALSE)

@@ -13,7 +13,8 @@ synthesize_interpretation(
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
   schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
   user_weights = list(),
-  fusion = NULL
+  fusion = NULL,
+  dataset_context = NULL
 )
 }
 \arguments{
@@ -43,6 +44,10 @@ inject into the user prompt; \code{NULL} (default) computes it from
 \code{packet$fragments} and \code{user_weights}. \code{\link[=synthesize_module]{synthesize_module()}} computes it
 once and passes the same object here and to \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
 prompt and the final fused score are guaranteed to agree.}
+
+\item{dataset_context}{An optional dataset context, as built by
+\code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into
+\code{\link[=build_user_prompt]{build_user_prompt()}}. \code{NULL} (default) omits the DATASET CONTEXT block.}
 }
 \value{
 An \code{interpretation} object (not yet faithfulness-checked or

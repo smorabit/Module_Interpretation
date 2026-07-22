@@ -285,6 +285,9 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
 #'   `packet$fragments` and `user_weights`. [synthesize_module()] computes it
 #'   once and passes the same object here and to [fuse_confidence()], so the
 #'   prompt and the final fused score are guaranteed to agree.
+#' @param dataset_context An optional dataset context, as built by
+#'   [build_dataset_context()] / [run_dataset_context()], threaded into
+#'   [build_user_prompt()]. `NULL` (default) omits the DATASET CONTEXT block.
 #' @return An `interpretation` object (not yet faithfulness-checked or
 #'   confidence-fused; see [synthesize_module()] for the full pipeline).
 #' @examples
@@ -296,12 +299,12 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
 synthesize_interpretation <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                        prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
-                                       user_weights = list(), fusion = NULL){
+                                       user_weights = list(), fusion = NULL, dataset_context = NULL){
     validate_dataset_description(desc)
     fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
 
     system_prompt <- build_system_prompt()
-    user_prompt <- build_user_prompt(packet, desc, fusion = fusion)
+    user_prompt <- build_user_prompt(packet, desc, fusion = fusion, dataset_context = dataset_context)
     schema_json <- model_output_schema_json(schema_path)
 
     result <- backend(system_prompt, user_prompt, schema_json, packet_hash = packet$packet_hash)

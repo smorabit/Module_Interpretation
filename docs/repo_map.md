@@ -118,11 +118,13 @@
 │   ├── read_evidence_packet.Rd
 │   ├── read_interpretation.Rd
 │   ├── register_tool.Rd
+│   ├── render_dataset_context_compact.Rd
 │   ├── render_dataset_description.Rd
 │   ├── render_packet_compact.Rd
 │   ├── render_paragraph.Rd
 │   ├── RENDER_TEMPLATE_VERSION.Rd
 │   ├── resolve_backend.Rd
+│   ├── run_dataset_context.Rd
 │   ├── run_module.Rd
 │   ├── run_orchestrator.Rd
 │   ├── run_synthesis_orchestrator.Rd
@@ -555,6 +557,7 @@
 │       ├── synthetic_pseudobulk.R
 │       ├── test-confidence.R
 │       ├── test-dataset_fragment.R
+│       ├── test-dataset_orchestrator.R
 │       ├── test-faithfulness.R
 │       ├── test-fragment.R
 │       ├── test-import_fragment.R
@@ -576,4 +579,4 @@
 └── vignettes
     └── getting-started.Rmd
 
-52 directories, 525 files
+52 directories, 528 files

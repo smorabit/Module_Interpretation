@@ -10,7 +10,8 @@ build_user_prompt(
   fusion = NULL,
   data_level = "cell",
   aggregated = FALSE,
-  user_weights = list()
+  user_weights = list(),
+  dataset_context = NULL
 )
 }
 \arguments{
@@ -31,14 +32,21 @@ aggregated across cells; see \code{\link[=render_dataset_description]{render_dat
 
 \item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
 to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} when \code{fusion} is \code{NULL}. Default \code{list()}.}
+
+\item{dataset_context}{An optional dataset context, as built by
+\code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}. Rendered via
+\code{\link[=render_dataset_context_compact]{render_dataset_context_compact()}} between the dataset description and
+the evidence packet. \code{NULL} (default) omits the block entirely, matching
+prior prompt output exactly.}
 }
 \value{
 A single character string.
 }
 \description{
-Concatenates the rendered \code{\link[=dataset_description]{dataset_description()}}, the compact evidence
-packet (\code{\link[=render_packet_compact]{render_packet_compact()}}), and the deterministic EVIDENCE
-CONFIDENCE MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) that grounds the model's
+Concatenates the rendered \code{\link[=dataset_description]{dataset_description()}}, the optional
+\code{\link[=render_dataset_context_compact]{render_dataset_context_compact()}} block, the compact evidence packet
+(\code{\link[=render_packet_compact]{render_packet_compact()}}), and the deterministic EVIDENCE CONFIDENCE
+MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) that grounds the model's
 \code{confidence.score} in the same numbers \code{\link[=fuse_confidence]{fuse_confidence()}} later
 re-derives the final fused score from.
 }
