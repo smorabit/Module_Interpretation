@@ -9,6 +9,8 @@
 ^\.git$
 ^\.gitignore$
 ^STYLE\.md$
+^CLAUDE\.md$
+^CLAUDE_old\.md$
 ^2026-.*\.md$
 ^README\.Rmd$
 ^_pkgdown\.yml$

@@ -16,20 +16,8 @@ home:
 
 navbar:
   structure:
-    left: [intro, reference, articles, design]
+    left: [intro, reference, articles]
     right: [search, github]
-  components:
-    design:
-      text: Design docs
-      menu:
-      - text: Concept
-        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/overview.md
-      - text: Architecture
-        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/implementation_guide.md
-      - text: Data contracts (schemas)
-        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/schemas.md
-      - text: Custom tools
-        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/custom_tools.md
 
 reference:
 - title: ModuleSet adapter

@@ -38,3 +38,20 @@ Thumbs.db
 *.log
 *.tmp
 node_modules/
+
+# --- internal dev docs (kept locally, not public) ---
+CLAUDE.md
+CLAUDE_old.md
+STYLE.md
+docs/
+2026-*.md
+
+# --- pkgdown auto-renders every root *.md into an html page; keep the
+# --- internal ones out of the published site ---
+pkgdown_site/CLAUDE.html
+pkgdown_site/CLAUDE_old.html
+pkgdown_site/STYLE.html
+pkgdown_site/2026-*.html
+
+# --- Obsidian editor UI state, not project content ---
+.obsidian/workspace.json
