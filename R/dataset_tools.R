@@ -3,6 +3,51 @@
 ## module, and touch only the ModuleSet adapter contract (metadata(),
 ## has_capability(), pkg_versions()) -- never hdWGCNA/Seurat directly.
 
+# prcomp(t(X), rank. = n_components, scale = TRUE) ported from
+# sample_code/pseudobulk_functions.R:436 PseudobulkPCA(), dropping the SE
+# assay plumbing; drops zero-variance genes first since scale = TRUE errors
+# on a constant column (sample_code/TCGA_predictions_clean.Rmd:170-173)
+.pseudobulk_pca <- function(X, n_components){
+    gene_var <- apply(X, 1, stats::var)
+    X <- X[gene_var > 0, , drop = FALSE]
+    n_components <- min(n_components, ncol(X) - 1, nrow(X))
+    pca <- stats::prcomp(t(X), rank. = n_components, scale. = TRUE)
+    list(embedding = pca$x, variance = pca$sdev^2 / sum(pca$sdev^2))
+}
+
+# ported from sample_code/pseudobulk_functions.R:900-936 PCRegression()'s
+# multi-covariate branch: per covariate x PC, lm(pc_scores ~ covariate),
+# summary()$r.squared / adj.r.squared and anova()$"Pr(>F)"[1], BH-corrected
+# across the whole table. No SummarizedExperiment metadata-slot writes --
+# llegir has no SE metadata slots, so this returns the tidy table directly.
+.pc_regression <- function(embedding, meta_df, covariates){
+    num_pcs <- ncol(embedding)
+    df <- data.frame()
+    for (cov_name in covariates) {
+        for (i in seq_len(num_pcs)) {
+            pc_scores <- embedding[, i]
+            formula_str <- paste('pc_scores ~', cov_name)
+            tryCatch({
+                lm_fit <- stats::lm(stats::as.formula(formula_str), data = cbind(pc_scores = pc_scores, meta_df))
+                s <- summary(lm_fit)
+                a <- stats::anova(lm_fit)
+                cur_df <- data.frame(
+                    component = i,
+                    covariate = cov_name,
+                    R2 = s$r.squared,
+                    adj_R2 = s$adj.r.squared,
+                    pval = a$`Pr(>F)`[1]
+                )
+                df <- rbind(df, cur_df)
+            }, error = function(e){
+                warning(paste('Error fitting model for PC', i, 'and covariate', cov_name, ':', e$message))
+            })
+        }
+    }
+    df$fdr <- stats::p.adjust(df$pval, method = 'BH')
+    df
+}
+
 # shannon entropy (natural log) of a count vector; 0 when every unit falls
 # into one group (maximally skewed), ln(k) when spread evenly across k groups
 .shannon_entropy <- function(counts){
@@ -165,6 +210,123 @@ dataset_composition_tool <- function(ctx){
         provenance = make_provenance(
             tool_version = '0.1',
             params = list(group_col = group_col, condition_col = condition_col %||% NA_character_),
+            pkg_versions = pkg_versions(ctx$ms)
+        )
+    )
+}
+
+#' Dataset tool: how much dataset variance aligns with each metadata covariate
+#'
+#' The trust prior for every downstream `cross_condition_delta`: runs PCA on
+#' the pseudo-bulk expression matrix, then regresses each principal component
+#' against each declared metadata covariate (`lm(pc_scores ~ covariate)`),
+#' reporting `R2`/`adj_R2`/`fdr` per covariate x PC pair. Lets the synthesis
+#' prompt tell whether a module's cross-condition signal rides on real
+#' biology or on a technical axis (batch, sequencing depth) that happens to
+#' dominate the same principal component. Ported from
+#' `sample_code/pseudobulk_functions.R` `PseudobulkPCA()` / `PCRegression()`
+#' (multi-covariate branch); see [.pseudobulk_pca()] / [.pc_regression()].
+#'
+#' @param ctx A dataset tool context list: `list(ms, params, module_method)`,
+#'   as built by [run_dataset_context()]. `ctx$params$covariates` (required)
+#'   is a character vector of pseudo-bulk metadata columns to regress each PC
+#'   against. `ctx$params$condition_col` (required) names the biological
+#'   covariate among `covariates`; every other entry is treated as
+#'   `'technical'` for the confounding check unless
+#'   `ctx$params$technical_covariates` overrides that. `ctx$params$n_components`
+#'   (default `10`) is the number of principal components to compute,
+#'   clamped to what the pseudo-bulk matrix can support.
+#' @return A `dataset_fragment` of type `'variance_structure'`, or `NULL` if
+#'   [pseudobulk_view()] can't resolve a pseudo-bulk view for `ctx$ms` -- a
+#'   graceful skip, not an error.
+#' @examples
+#' \dontrun{
+#' pb_ms <- pseudobulk_ModuleSet(pb_counts, list(module_a = c('GENE1', 'GENE2')), pb_meta)
+#' dataset_variance_structure_tool(list(
+#'     ms = pb_ms, params = list(covariates = c('condition', 'batch'), condition_col = 'condition')
+#' ))
+#' }
+#' @export
+dataset_variance_structure_tool <- function(ctx){
+    covariates <- ctx$params$covariates
+    if (is.null(covariates)) stop('dataset_variance_structure requires params$covariates')
+    condition_col <- ctx$params$condition_col
+    if (is.null(condition_col)) stop('dataset_variance_structure requires params$condition_col')
+    technical_covariates <- ctx$params$technical_covariates %||% setdiff(covariates, condition_col)
+    n_components <- ctx$params$n_components %||% 10
+
+    pb_view <- pseudobulk_view(ctx$ms)
+    if (is.null(pb_view)) {
+        message('dataset_variance_structure: skipped, no pseudo-bulk view resolvable for this ModuleSet')
+        return(NULL)
+    }
+
+    meta <- metadata(pb_view)
+    missing_covs <- setdiff(covariates, colnames(meta))
+    if (length(missing_covs) > 0) stop('metadata columns not found: ', paste(missing_covs, collapse = ', '))
+
+    meta_df <- as.data.frame(meta[, covariates, drop = FALSE])
+    for (col in covariates) {
+        if (length(unique(meta_df[[col]])) <= 1) {
+            stop("covariate '", col, "' has zero or one unique value and cannot be used for regression")
+        }
+        if (is.character(meta_df[[col]])) meta_df[[col]] <- factor(meta_df[[col]])
+    }
+
+    pca <- .pseudobulk_pca(expression(pb_view), n_components)
+    regression <- .pc_regression(pca$embedding, meta_df, covariates)
+
+    sig <- regression[regression$fdr < 0.05, , drop = FALSE]
+    sig <- sig[order(-sig$adj_R2), ]
+    top_findings <- lapply(seq_len(min(5, nrow(sig))), function(i){
+        list(
+            component = sig$component[i], covariate = sig$covariate[i],
+            adj_R2 = round(sig$adj_R2[i], 3), fdr = signif(sig$fdr[i], 3)
+        )
+    })
+
+    caveats <- list()
+    if (nrow(sig) > 0) {
+        # the caveat compares the technical and biological covariates on the
+        # SAME pc -- the one the strongest signal (of any covariate) lands on --
+        # since a technical axis dominating a different pc than condition
+        # isn't a confound of that condition's signal
+        top_component <- sig$component[1]
+        comp_rows <- regression[regression$component == top_component, ]
+        condition_adj_r2 <- comp_rows$adj_R2[comp_rows$covariate == condition_col]
+        condition_adj_r2 <- if (length(condition_adj_r2) == 0) 0 else condition_adj_r2[1]
+        technical_rows <- comp_rows[comp_rows$covariate %in% technical_covariates & comp_rows$fdr < 0.05, ]
+        if (nrow(technical_rows) > 0 && max(technical_rows$adj_R2) > condition_adj_r2) {
+            caveats[[length(caveats) + 1]] <- 'condition_confounded_with_batch'
+        }
+    }
+
+    n_samples <- nrow(pca$embedding)
+    compact_summary <- if (nrow(sig) > 0) {
+        top <- sig[1, ]
+        paste0(
+            'variance structure across ', n_samples, ' pseudo-bulk samples: PC', top$component,
+            ' (', round(pca$variance[top$component] * 100, 1), '% var) most aligned with ', top$covariate,
+            ' (adj_R2=', round(top$adj_R2, 2), ', FDR=', signif(top$fdr, 2), ')'
+        )
+    } else {
+        paste0(
+            'variance structure across ', n_samples,
+            ' pseudo-bulk samples: no covariate significantly explains a top PC (FDR<0.05)'
+        )
+    }
+
+    dataset_fragment(
+        fragment_id = 'variance_structure',
+        tool_id = 'dataset_variance_structure',
+        type = 'variance_structure',
+        result = regression,
+        compact_summary = compact_summary,
+        top_findings = top_findings,
+        caveats = caveats,
+        provenance = make_provenance(
+            tool_version = '0.1',
+            params = list(covariates = covariates, condition_col = condition_col, n_components = ncol(pca$embedding)),
             pkg_versions = pkg_versions(ctx$ms)
         )
     )

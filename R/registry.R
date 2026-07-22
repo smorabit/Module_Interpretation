@@ -147,4 +147,9 @@ list_tools <- function(scope = NULL){
         description = 'Cell-state census and condition covariate balance across the whole dataset',
         requires = 'grouping', scope = 'dataset'
     )
+    register_tool(
+        'variance_structure', dataset_variance_structure_tool, type = 'variance_structure',
+        description = 'Principal-component regression against metadata covariates, on the pseudo-bulk view',
+        requires = character(0), scope = 'dataset'
+    )
 }
