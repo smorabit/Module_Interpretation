@@ -152,4 +152,9 @@ list_tools <- function(scope = NULL){
         description = 'Principal-component regression against metadata covariates, on the pseudo-bulk view',
         requires = character(0), scope = 'dataset'
     )
+    register_tool(
+        'baseline_expression', dataset_baseline_expression_tool, type = 'baseline_expression',
+        description = 'Dataset-wide baseline expression, ribosomal/mitochondrial mass, and depth distribution',
+        requires = 'expression', scope = 'dataset'
+    )
 }

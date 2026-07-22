@@ -331,3 +331,107 @@ dataset_variance_structure_tool <- function(ctx){
         )
     )
 }
+
+#' Dataset tool: dataset-wide baseline expression and housekeeping signal
+#'
+#' Distinguishes specific per-module biology from dataset-wide ambient /
+#' housekeeping signal: mean expression, detection rate, and CV per gene
+#' (`expression(ms)`, full matrix, never returned), the top-N globally
+#' dominant genes by mean expression, ribosomal (`^RP[LS]`) / mitochondrial
+#' (`^MT-`) mass, and a depth (`nCount`) distribution summary. Touches only
+#' the `ModuleSet` adapter contract ([expression()], [counts()],
+#' [has_capability()], [pkg_versions()]). Does **not** set the per-module
+#' `hub_genes_are_housekeeping` caveat -- that is a judgment about one
+#' module's hub genes, made by synthesis after reading the exposed dominant-
+#' gene list, not by this tool.
+#'
+#' @param ctx A dataset tool context list: `list(ms, params, module_method)`,
+#'   as built by [run_dataset_context()]. `ctx$params$top_n` (default `15`)
+#'   is the number of globally dominant genes (by mean expression) to keep in
+#'   `result` and `top_findings` -- this list doubles as the ubiquitous-gene
+#'   set synthesis can cross-check a module's hub genes against.
+#' @return A `dataset_fragment` of type `'baseline_expression'`, or `NULL` if
+#'   `ctx$ms` lacks the `expression` capability (see [capabilities()]) -- a
+#'   graceful skip, not an error.
+#' @examples
+#' ms <- llegir_example_moduleset()
+#' dataset_baseline_expression_tool(list(ms = ms, params = list()))
+#' @export
+dataset_baseline_expression_tool <- function(ctx){
+    top_n <- ctx$params$top_n %||% 15
+
+    if (!has_capability(ctx$ms, 'expression')) {
+        message('dataset_baseline_expression: skipped, module set lacks the expression capability')
+        return(NULL)
+    }
+
+    expr <- as.matrix(expression(ctx$ms))
+    gene_names <- rownames(expr)
+
+    mean_expr <- rowMeans(expr)
+    detection_rate <- rowMeans(expr > 0)
+    gene_sd <- apply(expr, 1, stats::sd)
+    # CV undefined for a zero-mean gene; leave NA rather than dividing by zero
+    cv <- ifelse(mean_expr > 0, gene_sd / mean_expr, NA_real_)
+
+    ranked <- data.frame(
+        gene_name = gene_names,
+        mean_expr = mean_expr,
+        detection_rate = detection_rate,
+        cv = cv,
+        stringsAsFactors = FALSE
+    )
+    ranked <- ranked[order(-ranked$mean_expr), ]
+    result <- ranked[seq_len(min(top_n, nrow(ranked))), ]
+    rownames(result) <- NULL
+
+    top_findings <- lapply(seq_len(nrow(result)), function(i){
+        list(
+            gene_name = result$gene_name[i],
+            mean_expr = round(result$mean_expr[i], 3),
+            detection_rate = round(result$detection_rate[i], 3)
+        )
+    })
+
+    total_mass <- sum(mean_expr)
+    pct_ribo <- if (total_mass > 0) 100 * sum(mean_expr[grepl('^RP[LS]', gene_names)]) / total_mass else 0
+    pct_mito <- if (total_mass > 0) 100 * sum(mean_expr[grepl('^MT-', gene_names)]) / total_mass else 0
+    top_findings[[length(top_findings) + 1]] <- list(metric = 'pct_ribo_mass', value = round(pct_ribo, 2))
+    top_findings[[length(top_findings) + 1]] <- list(metric = 'pct_mito_mass', value = round(pct_mito, 2))
+
+    # counts() is a truer sequencing-depth proxy than expression() (which may
+    # already be normalized/log-transformed); fall back to expression() when
+    # the counts capability isn't declared
+    depth_source <- if (has_capability(ctx$ms, 'counts')) counts(ctx$ms) else NULL
+    depth_source <- depth_source %||% expr
+    depth <- colSums(depth_source)
+    depth_summary <- c(min = min(depth), median = stats::median(depth), mean = mean(depth), max = max(depth))
+    top_findings[[length(top_findings) + 1]] <- list(
+        metric = 'depth_distribution',
+        min = round(depth_summary[['min']], 1), median = round(depth_summary[['median']], 1),
+        mean = round(depth_summary[['mean']], 1), max = round(depth_summary[['max']], 1)
+    )
+
+    unit_label <- paste0(ctx$ms$data_level %||% 'cell', 's')
+    compact_summary <- paste0(
+        'baseline expression across ', format(ncol(expr), big.mark = ','), ' ', unit_label, ': ',
+        'most dominant gene ', result$gene_name[1], ' (mean=', round(result$mean_expr[1], 2), '); ',
+        'ribosomal mass=', round(pct_ribo, 1), '%, mitochondrial mass=', round(pct_mito, 1), '%; ',
+        'depth median=', round(depth_summary[['median']], 1)
+    )
+
+    dataset_fragment(
+        fragment_id = 'baseline_expression',
+        tool_id = 'dataset_baseline_expression',
+        type = 'baseline_expression',
+        result = result,
+        compact_summary = compact_summary,
+        top_findings = top_findings,
+        caveats = list(),
+        provenance = make_provenance(
+            tool_version = '0.1',
+            params = list(top_n = top_n),
+            pkg_versions = pkg_versions(ctx$ms)
+        )
+    )
+}
